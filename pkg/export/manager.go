@@ -107,7 +107,11 @@ func (m Manager) exportLoop(ctx context.Context, out <-chan []model.Config, outs
 			return
 		case cfgs := <-out:
 			for _, eOut := range outs {
-				eOut <- cfgs
+				select {
+				case <-ctx.Done():
+					return
+				case eOut <- cfgs:
+				}
 			}
 		}
 	}
