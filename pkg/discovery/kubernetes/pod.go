@@ -62,6 +62,9 @@ func NewPod(pod, cmap, secret cache.SharedInformer) *Pod {
 		UpdateFunc: func(_, obj interface{}) { enqueue(queue, obj) },
 		DeleteFunc: func(obj interface{}) { enqueue(queue, obj) },
 	})
+	if cmap == nil || secret == nil {
+		panic("nil cmap or secret informer")
+	}
 
 	return &Pod{
 		podInformer:    pod,
