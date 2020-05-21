@@ -67,7 +67,6 @@ type (
 		selectorField string
 		client        kubernetes.Interface
 		discoverers   []discoverer
-		nodeName      string
 		started       chan struct{}
 	}
 )
