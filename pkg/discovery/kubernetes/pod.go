@@ -113,7 +113,7 @@ func (p *Pod) processOnce(ctx context.Context, in chan<- []model.Group) bool {
 		send(ctx, in, &podGroup{source: podSourceFromNsName(namespace, name)})
 		return true
 	}
-	pod, err := convertToPod(item)
+	pod, err := toPod(item)
 	if err != nil {
 		return true
 	}
@@ -211,7 +211,7 @@ func (p Pod) valueFromConfigMap(vars map[string]string, ns string, env apiv1.Env
 	if err != nil || !exist {
 		return
 	}
-	cmap, err := convertToConfigMap(item)
+	cmap, err := toConfigMap(item)
 	if err != nil {
 		return
 	}
@@ -236,7 +236,7 @@ func (p Pod) valueFromSecret(vars map[string]string, ns string, env apiv1.EnvVar
 	if err != nil || !exist {
 		return
 	}
-	secret, err := convertToSecret(item)
+	secret, err := toSecret(item)
 	if err != nil {
 		return
 	}
@@ -254,7 +254,7 @@ func (p Pod) envFromConfigMap(vars map[string]string, ns string, src apiv1.EnvFr
 	if err != nil || !exist {
 		return
 	}
-	cmap, err := convertToConfigMap(item)
+	cmap, err := toConfigMap(item)
 	if err != nil {
 		return
 	}
@@ -272,7 +272,7 @@ func (p Pod) envFromSecret(vars map[string]string, ns string, src apiv1.EnvFromS
 	if err != nil || !exist {
 		return
 	}
-	secret, err := convertToSecret(item)
+	secret, err := toSecret(item)
 	if err != nil {
 		return
 	}
@@ -299,7 +299,7 @@ func podSource(pod *apiv1.Pod) string {
 	return podSourceFromNsName(pod.Namespace, pod.Name)
 }
 
-func convertToPod(item interface{}) (*apiv1.Pod, error) {
+func toPod(item interface{}) (*apiv1.Pod, error) {
 	pod, ok := item.(*apiv1.Pod)
 	if !ok {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
@@ -307,7 +307,7 @@ func convertToPod(item interface{}) (*apiv1.Pod, error) {
 	return pod, nil
 }
 
-func convertToConfigMap(item interface{}) (*apiv1.ConfigMap, error) {
+func toConfigMap(item interface{}) (*apiv1.ConfigMap, error) {
 	cmap, ok := item.(*apiv1.ConfigMap)
 	if !ok {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
@@ -315,7 +315,7 @@ func convertToConfigMap(item interface{}) (*apiv1.ConfigMap, error) {
 	return cmap, nil
 }
 
-func convertToSecret(item interface{}) (*apiv1.Secret, error) {
+func toSecret(item interface{}) (*apiv1.Secret, error) {
 	secret, ok := item.(*apiv1.Secret)
 	if !ok {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
@@ -323,11 +323,11 @@ func convertToSecret(item interface{}) (*apiv1.Secret, error) {
 	return secret, nil
 }
 
-func isVar(s string) bool {
+func isVar(name string) bool {
 	// Variable references $(VAR_NAME) are expanded using the previous defined
 	// environment variables in the container and any service environment
 	// variables.
-	return strings.IndexByte(s, '$') != -1
+	return strings.IndexByte(name, '$') != -1
 }
 
 func decode64(bs []byte) string {

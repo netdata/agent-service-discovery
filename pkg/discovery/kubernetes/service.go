@@ -100,7 +100,7 @@ func (s *Service) processOnce(ctx context.Context, ch chan<- []model.Group) bool
 		send(ctx, ch, &serviceGroup{source: serviceSourceFromNsName(namespace, name)})
 		return true
 	}
-	svc, err := covertToService(item)
+	svc, err := toService(item)
 	if err != nil {
 		return true
 	}
@@ -166,7 +166,7 @@ func serviceSource(svc *apiv1.Service) string {
 	return serviceSourceFromNsName(svc.Namespace, svc.Name)
 }
 
-func covertToService(o interface{}) (*apiv1.Service, error) {
+func toService(o interface{}) (*apiv1.Service, error) {
 	svc, ok := o.(*apiv1.Service)
 	if !ok {
 		return nil, fmt.Errorf("received unexpected object type: %T", o)
