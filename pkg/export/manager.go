@@ -93,7 +93,7 @@ func (m *Manager) Export(ctx context.Context, out <-chan []model.Config) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		go m.exportLoop(ctx, out, outs)
+		m.exportLoop(ctx, out, outs)
 	}()
 
 	wg.Wait()
