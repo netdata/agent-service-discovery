@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 )
 
 func TestPodGroup_Source(t *testing.T) {
@@ -176,25 +175,25 @@ func TestPodTarget_TUID(t *testing.T) {
 	}
 }
 
-func TestNewPod(t *testing.T) {
-	tests := map[string]struct {
-		informer  cache.SharedInformer
-		wantPanic bool
-	}{
-		"valid informer": {informer: cache.NewSharedInformer(nil, &apiv1.Pod{}, resyncPeriod)},
-		"nil informer":   {wantPanic: true},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			if test.wantPanic {
-				assert.Panics(t, func() { NewPod(nil) })
-			} else {
-				assert.IsType(t, &Pod{}, NewPod(test.informer))
-			}
-		})
-	}
-}
+//func TestNewPod(t *testing.T) {
+//	tests := map[string]struct {
+//		informer  cache.SharedInformer
+//		wantPanic bool
+//	}{
+//		"valid informer": {informer: cache.NewSharedInformer(nil, &apiv1.Pod{}, resyncPeriod)},
+//		"nil informer":   {wantPanic: true},
+//	}
+//
+//	for name, test := range tests {
+//		t.Run(name, func(t *testing.T) {
+//			if test.wantPanic {
+//				assert.Panics(t, func() { NewPod(nil) })
+//			} else {
+//				assert.IsType(t, &Pod{}, NewPod(test.informer))
+//			}
+//		})
+//	}
+//}
 
 func TestPod_String(t *testing.T) {
 	assert.NotEmpty(t, Pod{}.String())

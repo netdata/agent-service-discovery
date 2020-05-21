@@ -177,7 +177,7 @@ func (d *Discovery) runTagging(ctx context.Context, updates chan []model.Group, 
 
 func (d *Discovery) setupPodDiscoverer(ctx context.Context, namespace string) *Pod {
 	pod := d.client.CoreV1().Pods(namespace)
-	clw := &cache.ListWatch{
+	podLW := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = d.selectorField
 			options.LabelSelector = d.selectorLabel
@@ -189,8 +189,32 @@ func (d *Discovery) setupPodDiscoverer(ctx context.Context, namespace string) *P
 			return pod.Watch(ctx, options)
 		},
 	}
-	inf := cache.NewSharedInformer(clw, &apiv1.Pod{}, resyncPeriod)
-	return NewPod(inf)
+
+	cmap := d.client.CoreV1().ConfigMaps(namespace)
+	cmapLW := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			return cmap.List(ctx, options)
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			return cmap.Watch(ctx, options)
+		},
+	}
+
+	secret := d.client.CoreV1().Secrets(namespace)
+	secretLW := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			return secret.List(ctx, options)
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			return secret.Watch(ctx, options)
+		},
+	}
+
+	return NewPod(
+		cache.NewSharedInformer(podLW, &apiv1.Pod{}, resyncPeriod),
+		cache.NewSharedInformer(cmapLW, &apiv1.ConfigMap{}, resyncPeriod),
+		cache.NewSharedInformer(secretLW, &apiv1.Secret{}, resyncPeriod),
+	)
 }
 
 func (d *Discovery) setupServiceDiscoverer(ctx context.Context, namespace string) *Service {

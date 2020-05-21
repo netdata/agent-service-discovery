@@ -34,7 +34,7 @@ type (
 
 		ContName     string
 		Image        string
-		Env          map[string]string // TODO: gather vars from secrets...
+		Env          map[string]string
 		PortNumber   string
 		PortName     string
 		PortProtocol string
@@ -48,21 +48,25 @@ func (pg podGroup) Source() string          { return pg.source }
 func (pg podGroup) Targets() []model.Target { return pg.targets }
 
 type Pod struct {
-	informer cache.SharedInformer
-	queue    *workqueue.Type
+	podInformer    cache.SharedInformer
+	cmapInformer   cache.SharedInformer
+	secretInformer cache.SharedInformer
+	queue          *workqueue.Type
 }
 
-func NewPod(inf cache.SharedInformer) *Pod {
+func NewPod(pod, cfgMap, secret cache.SharedInformer) *Pod {
 	queue := workqueue.NewNamed("pod")
-	inf.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	pod.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { enqueue(queue, obj) },
 		UpdateFunc: func(_, obj interface{}) { enqueue(queue, obj) },
 		DeleteFunc: func(obj interface{}) { enqueue(queue, obj) },
 	})
 
 	return &Pod{
-		informer: inf,
-		queue:    queue,
+		podInformer:    pod,
+		cmapInformer:   cfgMap,
+		secretInformer: secret,
+		queue:          queue,
 	}
 }
 
@@ -72,8 +76,13 @@ func (p Pod) String() string {
 
 func (p *Pod) Discover(ctx context.Context, in chan<- []model.Group) {
 	defer p.queue.ShutDown()
-	go p.informer.Run(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), p.informer.HasSynced) {
+
+	go p.podInformer.Run(ctx.Done())
+	go p.cmapInformer.Run(ctx.Done())
+	go p.secretInformer.Run(ctx.Done())
+
+	if !cache.WaitForCacheSync(ctx.Done(),
+		p.podInformer.HasSynced, p.cmapInformer.HasSynced, p.secretInformer.HasSynced) {
 		return
 	}
 	go func() {
@@ -95,7 +104,7 @@ func (p *Pod) processOnce(ctx context.Context, in chan<- []model.Group) bool {
 	if err != nil {
 		return true
 	}
-	item, exists, err := p.informer.GetStore().GetByKey(key)
+	item, exists, err := p.podInformer.GetStore().GetByKey(key)
 	if err != nil {
 		return true
 	}
@@ -125,6 +134,8 @@ func (p Pod) buildGroup(pod *apiv1.Pod) model.Group {
 
 func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 	for _, container := range pod.Spec.Containers {
+		env := p.collectENV(pod.Namespace, container)
+
 		for _, port := range container.Ports {
 			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
 			target := &PodTarget{
@@ -138,7 +149,7 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 				PodIP:        pod.Status.PodIP,
 				ContName:     container.Name,
 				Image:        container.Image,
-				Env:          nil, // TODO: get env vars from secrets...
+				Env:          env,
 				PortNumber:   portNum,
 				PortName:     port.Name,
 				PortProtocol: string(port.Protocol),
@@ -153,6 +164,12 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 		}
 	}
 	return targets
+}
+
+func (p Pod) collectENV(namespace string, container apiv1.Container) map[string]string {
+	_ = container.Env
+	_ = container.EnvFrom
+	return nil
 }
 
 func podTUID(pod *apiv1.Pod, container apiv1.Container, port apiv1.ContainerPort) string {
@@ -179,4 +196,11 @@ func covertToPod(item interface{}) (*apiv1.Pod, error) {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
 	}
 	return pod, nil
+}
+
+func isVariable(s string) bool {
+	// Variable references $(VAR_NAME) are expanded using the previous defined
+	// environment variables in the container and any service environment
+	// variables.
+	return strings.IndexByte(s, '$') != -1
 }

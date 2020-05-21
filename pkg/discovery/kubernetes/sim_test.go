@@ -119,8 +119,13 @@ func (d *Discovery) hasSynced() bool {
 	return true
 }
 
-func (p *Pod) hasSynced() bool     { return p.informer.HasSynced() }
-func (s *Service) hasSynced() bool { return s.informer.HasSynced() }
+func (p *Pod) hasSynced() bool {
+	return p.podInformer.HasSynced() && p.cmapInformer.HasSynced() && p.secretInformer.HasSynced()
+}
+
+func (s *Service) hasSynced() bool {
+	return s.informer.HasSynced()
+}
 
 func sortGroups(groups []model.Group) {
 	if len(groups) == 0 {
