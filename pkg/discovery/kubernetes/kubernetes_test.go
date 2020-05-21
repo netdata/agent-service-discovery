@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/netdata/sd/pkg/model"
@@ -14,14 +15,25 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+func TestMain(m *testing.M) {
+	_ = os.Setenv(envNodeName, "m01")
+	_ = os.Setenv(envFakeClient, "true")
+	code := m.Run()
+	_ = os.Unsetenv(envNodeName)
+	_ = os.Unsetenv(envFakeClient)
+	os.Exit(code)
+}
+
 func TestNewDiscovery(t *testing.T) {
 	tests := map[string]struct {
 		cfg     Config
 		wantErr bool
 	}{
-		"empty config": {wantErr: true},
-		"invalid role": {cfg: Config{Role: "invalid"}, wantErr: true},
-		"lack of tags": {cfg: Config{Role: RolePod}, wantErr: true},
+		"role pod and local mode":     {cfg: Config{Role: RolePod, Tags: "k8s", LocalMode: true}},
+		"role service and local mode": {cfg: Config{Role: RoleService, Tags: "k8s", LocalMode: true}},
+		"empty config":                {wantErr: true},
+		"invalid role":                {cfg: Config{Role: "invalid"}, wantErr: true},
+		"lack of tags":                {cfg: Config{Role: RolePod}, wantErr: true},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -33,6 +45,12 @@ func TestNewDiscovery(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, discovery)
+				if test.cfg.LocalMode && test.cfg.Role == RolePod {
+					assert.Contains(t, discovery.selectorField, "spec.nodeName=m01")
+				}
+				if test.cfg.LocalMode && test.cfg.Role != RolePod {
+					assert.Empty(t, discovery.selectorField)
+				}
 			}
 		})
 	}

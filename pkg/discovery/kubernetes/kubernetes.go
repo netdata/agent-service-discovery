@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,11 +29,16 @@ const (
 
 func isRoleValid(role string) bool { return role == RolePod || role == RoleService }
 
+const (
+	envNodeName = "MY_NODE_NAME"
+)
+
 type Config struct {
 	APIServer  string
 	Tags       string
 	Namespaces []string
 	Role       string
+	LocalMode  bool
 	Selector   struct {
 		Label string
 		Field string
@@ -76,8 +83,8 @@ func NewDiscovery(cfg Config) (*Discovery, error) {
 	return d, nil
 }
 
-func initDiscovery(conf Config) (*Discovery, error) {
-	tags, err := model.ParseTags(conf.Tags)
+func initDiscovery(cfg Config) (*Discovery, error) {
+	tags, err := model.ParseTags(cfg.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("parse config->tags: %v", err)
 	}
@@ -85,17 +92,20 @@ func initDiscovery(conf Config) (*Discovery, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create clientset: %v", err)
 	}
-	namespaces := conf.Namespaces
+	namespaces := cfg.Namespaces
 	if len(namespaces) == 0 {
 		namespaces = []string{apiv1.NamespaceAll}
+	}
+	if name := os.Getenv(envNodeName); name != "" && cfg.LocalMode && cfg.Role == RolePod {
+		cfg.Selector.Field = joinSelectors(cfg.Selector.Field, "spec.nodeName="+name)
 	}
 
 	d := &Discovery{
 		tags:          tags,
 		namespaces:    namespaces,
-		role:          conf.Role,
-		selectorLabel: conf.Selector.Label,
-		selectorField: conf.Selector.Field,
+		role:          cfg.Role,
+		selectorLabel: cfg.Selector.Label,
+		selectorField: cfg.Selector.Field,
 		client:        client,
 		discoverers:   make([]discoverer, 0, len(namespaces)),
 		started:       make(chan struct{}),
@@ -162,7 +172,6 @@ func (d *Discovery) runTagging(ctx context.Context, updates chan []model.Group, 
 }
 
 func (d *Discovery) setupPodDiscoverer(ctx context.Context, namespace string) *Pod {
-	// TODO: local mode "spec.nodeName=m01"
 	pod := d.client.CoreV1().Pods(namespace)
 	clw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -218,4 +227,15 @@ func send(ctx context.Context, in chan<- []model.Group, group model.Group) {
 
 func calcHash(obj interface{}) (uint64, error) {
 	return hashstructure.Hash(obj, nil)
+}
+
+func joinSelectors(srs ...string) string {
+	var i int
+	for _, v := range srs {
+		if v != "" {
+			srs[i] = v
+			i++
+		}
+	}
+	return strings.Join(srs[:i], ",")
 }

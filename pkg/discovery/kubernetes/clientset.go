@@ -6,11 +6,19 @@ import (
 	"path/filepath"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func clientSet() (*kubernetes.Clientset, error) {
+const (
+	envFakeClient = "FAKE_CLIENTSET"
+)
+
+func clientSet() (kubernetes.Interface, error) {
+	if os.Getenv(envFakeClient) != "" {
+		return fake.NewSimpleClientset(), nil
+	}
 	if isInCluster() {
 		return clientSetInCluster()
 	}
