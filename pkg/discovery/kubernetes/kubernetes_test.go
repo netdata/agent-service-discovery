@@ -62,8 +62,8 @@ func TestDiscovery_Discover(t *testing.T) {
 	prodNamespace := newNamespace(prod)
 	devNamespace := newNamespace(dev)
 
-	tests := map[string]func() discoverySimTest{
-		"multiple namespaces pod discovery": func() discoverySimTest {
+	tests := map[string]func() discoverySim{
+		"multiple namespaces pod discovery": func() discoverySim {
 			httpdProd, nginxProd := newHTTPDPod(), newNGINXPod()
 			httpdProd.Namespace = prod
 			nginxProd.Namespace = prod
@@ -77,7 +77,7 @@ func TestDiscovery_Discover(t *testing.T) {
 				[]string{prod, dev},
 				prodNamespace, devNamespace, httpdProd, nginxProd, httpdDev, nginxDev)
 
-			sim := discoverySimTest{
+			sim := discoverySim{
 				discovery:        discovery,
 				sortBeforeVerify: true,
 				expectedGroups: []model.Group{
@@ -89,7 +89,7 @@ func TestDiscovery_Discover(t *testing.T) {
 			}
 			return sim
 		},
-		"multiple namespaces ClusterIP service discovery": func() discoverySimTest {
+		"multiple namespaces ClusterIP service discovery": func() discoverySim {
 			httpdProd, nginxProd := newHTTPDClusterIPService(), newNGINXClusterIPService()
 			httpdProd.Namespace = prod
 			nginxProd.Namespace = prod
@@ -103,7 +103,7 @@ func TestDiscovery_Discover(t *testing.T) {
 				[]string{prod, dev},
 				prodNamespace, devNamespace, httpdProd, nginxProd, httpdDev, nginxDev)
 
-			sim := discoverySimTest{
+			sim := discoverySim{
 				discovery:        discovery,
 				sortBeforeVerify: true,
 				expectedGroups: []model.Group{
@@ -117,8 +117,8 @@ func TestDiscovery_Discover(t *testing.T) {
 		},
 	}
 
-	for name, createSim := range tests {
-		t.Run(name, func(t *testing.T) { createSim().run(t) })
+	for name, sim := range tests {
+		t.Run(name, func(t *testing.T) { sim().run(t) })
 	}
 }
 

@@ -18,14 +18,14 @@ const (
 	finishWaitTimeout = time.Second * 5
 )
 
-type discoverySimTest struct {
+type discoverySim struct {
 	discovery        *Discovery
 	runAfterSync     func(ctx context.Context)
 	sortBeforeVerify bool
 	expectedGroups   []model.Group
 }
 
-func (sim discoverySimTest) run(t *testing.T) []model.Group {
+func (sim discoverySim) run(t *testing.T) []model.Group {
 	t.Helper()
 	require.NotNil(t, sim.discovery)
 	require.NotEmpty(t, sim.expectedGroups)
@@ -60,7 +60,7 @@ func (sim discoverySimTest) run(t *testing.T) []model.Group {
 	return groups
 }
 
-func (sim discoverySimTest) collectGroups(t *testing.T, in, out chan []model.Group) {
+func (sim discoverySim) collectGroups(t *testing.T, in, out chan []model.Group) {
 	var groups []model.Group
 loop:
 	for {
@@ -78,7 +78,7 @@ loop:
 	out <- groups
 }
 
-func (sim discoverySimTest) verifyResult(t *testing.T, result []model.Group) {
+func (sim discoverySim) verifyResult(t *testing.T, result []model.Group) {
 	var expected, actual interface{}
 
 	if len(sim.expectedGroups) == len(result) {
@@ -119,8 +119,13 @@ func (d *Discovery) hasSynced() bool {
 	return true
 }
 
-func (p *Pod) hasSynced() bool     { return p.informer.HasSynced() }
-func (s *Service) hasSynced() bool { return s.informer.HasSynced() }
+func (p *Pod) hasSynced() bool {
+	return p.podInformer.HasSynced() && p.cmapInformer.HasSynced() && p.secretInformer.HasSynced()
+}
+
+func (s *Service) hasSynced() bool {
+	return s.informer.HasSynced()
+}
 
 func sortGroups(groups []model.Group) {
 	if len(groups) == 0 {
