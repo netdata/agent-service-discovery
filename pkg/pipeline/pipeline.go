@@ -79,8 +79,12 @@ func (p *Pipeline) processLoop(ctx context.Context, discCh chan []model.Group, e
 			if len(p.configs) == 0 {
 				continue
 			}
-			exportCh <- p.configs
-			p.configs = p.configs[:0:0]
+			select {
+			case <-ctx.Done():
+				return
+			case exportCh <- p.configs:
+				p.configs = p.configs[:0:0]
+			}
 		}
 	}
 }
