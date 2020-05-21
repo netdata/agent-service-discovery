@@ -17,8 +17,10 @@ import (
 
 func TestMain(m *testing.M) {
 	_ = os.Setenv(envNodeName, "m01")
+	_ = os.Setenv(envFakeClient, "true")
 	code := m.Run()
 	_ = os.Unsetenv(envNodeName)
+	_ = os.Unsetenv(envFakeClient)
 	os.Exit(code)
 }
 
