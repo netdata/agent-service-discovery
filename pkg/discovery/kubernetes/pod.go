@@ -173,20 +173,31 @@ func (p Pod) collectEnv(ns string, container apiv1.Container) map[string]string 
 	// When a key exists in multiple sources,
 	// the value associated with the last source will take precedence.
 	// Values defined by an Env with a duplicate key will take precedence.
-	for _, source := range container.EnvFrom {
-		p.envFromConfigMap(vars, ns, source)
-		p.envFromSecret(vars, ns, source)
+	//
+	// Order (https://github.com/kubernetes/kubectl/blob/master/pkg/describe/describe.go)
+	// - envFrom: configMapRef, secretRef
+	// - env: value || valueFrom: fieldRef, resourceFieldRef, secretRef, configMap
+
+	for _, src := range container.EnvFrom {
+		switch {
+		case src.ConfigMapRef != nil:
+			p.envFromConfigMap(vars, ns, src)
+		case src.SecretRef != nil:
+			p.envFromSecret(vars, ns, src)
+		}
 	}
 
 	for _, env := range container.Env {
 		if env.Name == "" || isVar(env.Name) {
 			continue
 		}
-		if env.Value != "" {
+		switch {
+		case env.Value != "":
 			vars[env.Name] = env.Value
-		} else {
-			p.valueFromConfigMap(vars, ns, env)
+		case env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil:
 			p.valueFromSecret(vars, ns, env)
+		case env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil:
+			p.valueFromConfigMap(vars, ns, env)
 		}
 	}
 	if len(vars) == 0 {
@@ -196,12 +207,7 @@ func (p Pod) collectEnv(ns string, container apiv1.Container) map[string]string 
 }
 
 func (p Pod) valueFromConfigMap(vars map[string]string, ns string, env apiv1.EnvVar) {
-	switch {
-	case
-		env.ValueFrom == nil,
-		env.ValueFrom.ConfigMapKeyRef == nil,
-		env.ValueFrom.ConfigMapKeyRef.Name == "",
-		env.ValueFrom.ConfigMapKeyRef.Key == "":
+	if env.ValueFrom.ConfigMapKeyRef.Name == "" || env.ValueFrom.ConfigMapKeyRef.Key == "" {
 		return
 	}
 
@@ -221,12 +227,7 @@ func (p Pod) valueFromConfigMap(vars map[string]string, ns string, env apiv1.Env
 }
 
 func (p Pod) valueFromSecret(vars map[string]string, ns string, env apiv1.EnvVar) {
-	switch {
-	case
-		env.ValueFrom == nil,
-		env.ValueFrom.SecretKeyRef == nil,
-		env.ValueFrom.SecretKeyRef.Name == "",
-		env.ValueFrom.SecretKeyRef.Key == "":
+	if env.ValueFrom.SecretKeyRef.Name == "" || env.ValueFrom.SecretKeyRef.Key == "" {
 		return
 	}
 
@@ -246,7 +247,7 @@ func (p Pod) valueFromSecret(vars map[string]string, ns string, env apiv1.EnvVar
 }
 
 func (p Pod) envFromConfigMap(vars map[string]string, ns string, src apiv1.EnvFromSource) {
-	if src.ConfigMapRef == nil || src.ConfigMapRef.Name == "" {
+	if src.ConfigMapRef.Name == "" {
 		return
 	}
 	key := ns + "/" + src.ConfigMapRef.Name
@@ -264,7 +265,7 @@ func (p Pod) envFromConfigMap(vars map[string]string, ns string, src apiv1.EnvFr
 }
 
 func (p Pod) envFromSecret(vars map[string]string, ns string, src apiv1.EnvFromSource) {
-	if src.SecretRef == nil || src.SecretRef.Name == "" {
+	if src.SecretRef.Name == "" {
 		return
 	}
 	key := ns + "/" + src.SecretRef.Name
