@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -54,7 +55,7 @@ type Pod struct {
 	queue          *workqueue.Type
 }
 
-func NewPod(pod, cfgMap, secret cache.SharedInformer) *Pod {
+func NewPod(pod, cmap, secret cache.SharedInformer) *Pod {
 	queue := workqueue.NewNamed("pod")
 	pod.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { enqueue(queue, obj) },
@@ -64,7 +65,7 @@ func NewPod(pod, cfgMap, secret cache.SharedInformer) *Pod {
 
 	return &Pod{
 		podInformer:    pod,
-		cmapInformer:   cfgMap,
+		cmapInformer:   cmap,
 		secretInformer: secret,
 		queue:          queue,
 	}
@@ -112,7 +113,7 @@ func (p *Pod) processOnce(ctx context.Context, in chan<- []model.Group) bool {
 		send(ctx, in, &podGroup{source: podSourceFromNsName(namespace, name)})
 		return true
 	}
-	pod, err := covertToPod(item)
+	pod, err := convertToPod(item)
 	if err != nil {
 		return true
 	}
@@ -134,7 +135,7 @@ func (p Pod) buildGroup(pod *apiv1.Pod) model.Group {
 
 func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 	for _, container := range pod.Spec.Containers {
-		env := p.collectENV(pod.Namespace, container)
+		env := p.collectEnv(pod.Namespace, container)
 
 		for _, port := range container.Ports {
 			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
@@ -166,10 +167,118 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 	return targets
 }
 
-func (p Pod) collectENV(namespace string, container apiv1.Container) map[string]string {
-	_ = container.Env
-	_ = container.EnvFrom
-	return nil
+func (p Pod) collectEnv(ns string, container apiv1.Container) map[string]string {
+	vars := make(map[string]string)
+
+	// When a key exists in multiple sources,
+	// the value associated with the last source will take precedence.
+	// Values defined by an Env with a duplicate key will take precedence.
+	for _, source := range container.EnvFrom {
+		p.envFromConfigMap(vars, ns, source)
+		p.envFromSecret(vars, ns, source)
+	}
+
+	for _, env := range container.Env {
+		if env.Name == "" || isVar(env.Name) {
+			continue
+		}
+		if env.Value != "" {
+			vars[env.Name] = env.Value
+		} else {
+			p.valueFromConfigMap(vars, ns, env)
+			p.valueFromSecret(vars, ns, env)
+		}
+	}
+	if len(vars) == 0 {
+		return nil
+	}
+	return vars
+}
+
+func (p Pod) valueFromConfigMap(vars map[string]string, ns string, env apiv1.EnvVar) {
+	switch {
+	case
+		env.ValueFrom == nil,
+		env.ValueFrom.ConfigMapKeyRef == nil,
+		env.ValueFrom.ConfigMapKeyRef.Name == "",
+		env.ValueFrom.ConfigMapKeyRef.Key == "":
+		return
+	}
+
+	sr := env.ValueFrom.ConfigMapKeyRef
+	key := ns + "/" + sr.Name
+	item, exist, err := p.cmapInformer.GetStore().GetByKey(key)
+	if err != nil || !exist {
+		return
+	}
+	cmap, err := convertToConfigMap(item)
+	if err != nil {
+		return
+	}
+	if v, ok := cmap.Data[sr.Key]; ok {
+		vars[env.Name] = v
+	}
+}
+
+func (p Pod) valueFromSecret(vars map[string]string, ns string, env apiv1.EnvVar) {
+	switch {
+	case
+		env.ValueFrom == nil,
+		env.ValueFrom.SecretKeyRef == nil,
+		env.ValueFrom.SecretKeyRef.Name == "",
+		env.ValueFrom.SecretKeyRef.Key == "":
+		return
+	}
+
+	sr := env.ValueFrom.SecretKeyRef
+	key := ns + "/" + sr.Name
+	item, exist, err := p.secretInformer.GetStore().GetByKey(key)
+	if err != nil || !exist {
+		return
+	}
+	secret, err := convertToSecret(item)
+	if err != nil {
+		return
+	}
+	if v, ok := secret.Data[sr.Key]; ok {
+		vars[env.Name] = decode64(v)
+	}
+}
+
+func (p Pod) envFromConfigMap(vars map[string]string, ns string, src apiv1.EnvFromSource) {
+	if src.ConfigMapRef == nil || src.ConfigMapRef.Name == "" {
+		return
+	}
+	key := ns + "/" + src.ConfigMapRef.Name
+	item, exist, err := p.cmapInformer.GetStore().GetByKey(key)
+	if err != nil || !exist {
+		return
+	}
+	cmap, err := convertToConfigMap(item)
+	if err != nil {
+		return
+	}
+	for k, v := range cmap.Data {
+		vars[src.Prefix+k] = v
+	}
+}
+
+func (p Pod) envFromSecret(vars map[string]string, ns string, src apiv1.EnvFromSource) {
+	if src.SecretRef == nil || src.SecretRef.Name == "" {
+		return
+	}
+	key := ns + "/" + src.SecretRef.Name
+	item, exist, err := p.secretInformer.GetStore().GetByKey(key)
+	if err != nil || !exist {
+		return
+	}
+	secret, err := convertToSecret(item)
+	if err != nil {
+		return
+	}
+	for k, v := range secret.Data {
+		vars[src.Prefix+k] = decode64(v)
+	}
 }
 
 func podTUID(pod *apiv1.Pod, container apiv1.Container, port apiv1.ContainerPort) string {
@@ -190,7 +299,7 @@ func podSource(pod *apiv1.Pod) string {
 	return podSourceFromNsName(pod.Namespace, pod.Name)
 }
 
-func covertToPod(item interface{}) (*apiv1.Pod, error) {
+func convertToPod(item interface{}) (*apiv1.Pod, error) {
 	pod, ok := item.(*apiv1.Pod)
 	if !ok {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
@@ -198,9 +307,33 @@ func covertToPod(item interface{}) (*apiv1.Pod, error) {
 	return pod, nil
 }
 
-func isVariable(s string) bool {
+func convertToConfigMap(item interface{}) (*apiv1.ConfigMap, error) {
+	cmap, ok := item.(*apiv1.ConfigMap)
+	if !ok {
+		return nil, fmt.Errorf("received unexpected object type: %T", item)
+	}
+	return cmap, nil
+}
+
+func convertToSecret(item interface{}) (*apiv1.Secret, error) {
+	secret, ok := item.(*apiv1.Secret)
+	if !ok {
+		return nil, fmt.Errorf("received unexpected object type: %T", item)
+	}
+	return secret, nil
+}
+
+func isVar(s string) bool {
 	// Variable references $(VAR_NAME) are expanded using the previous defined
 	// environment variables in the container and any service environment
 	// variables.
 	return strings.IndexByte(s, '$') != -1
+}
+
+func decode64(bs []byte) string {
+	if len(bs) == 0 {
+		return ""
+	}
+	bs, _ = base64.StdEncoding.DecodeString(string(bs))
+	return string(bs)
 }
