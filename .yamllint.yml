@@ -1,0 +1,11 @@
+# extends https://yamllint.readthedocs.io/en/stable/configuration.html#default-configuration
+extends: default
+
+#yaml-files:
+#  - 'dir/*.conf'
+#  - 'dir/dir/*.conf'
+
+rules:
+  document-start: disable
+  line-length:
+    max: 120
