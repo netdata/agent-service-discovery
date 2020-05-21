@@ -161,12 +161,16 @@ func (d *Discovery) runTagging(ctx context.Context, updates chan []model.Group, 
 		case <-ctx.Done():
 			return
 		case groups := <-updates:
-			for _, g := range groups {
-				for _, t := range g.Targets() {
+			for _, group := range groups {
+				for _, t := range group.Targets() {
 					t.Tags().Merge(d.tags)
 				}
 			}
-			in <- groups
+			select {
+			case <-ctx.Done():
+				return
+			case in <- groups:
+			}
 		}
 	}
 }

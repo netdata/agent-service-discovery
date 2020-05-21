@@ -93,7 +93,7 @@ func (m *Manager) Export(ctx context.Context, out <-chan []model.Config) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		go m.exportLoop(ctx, out, outs)
+		m.exportLoop(ctx, out, outs)
 	}()
 
 	wg.Wait()
@@ -107,7 +107,11 @@ func (m Manager) exportLoop(ctx context.Context, out <-chan []model.Config, outs
 			return
 		case cfgs := <-out:
 			for _, eOut := range outs {
-				eOut <- cfgs
+				select {
+				case <-ctx.Done():
+					return
+				case eOut <- cfgs:
+				}
 			}
 		}
 	}
