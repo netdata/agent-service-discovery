@@ -55,7 +55,7 @@ func (p *Pipeline) Run(ctx context.Context) {
 	go func() { defer wg.Done(); p.Discover(ctx, disc) }()
 
 	wg.Add(1)
-	go func() { defer wg.Done(); p.processLoop(ctx, disc, exp) }()
+	go func() { defer wg.Done(); p.run(ctx, disc, exp) }()
 
 	wg.Add(1)
 	go func() { defer wg.Done(); p.Export(ctx, exp) }()
@@ -64,7 +64,7 @@ func (p *Pipeline) Run(ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (p *Pipeline) processLoop(ctx context.Context, disc chan []model.Group, export chan []model.Config) {
+func (p *Pipeline) run(ctx context.Context, disc chan []model.Group, export chan []model.Config) {
 	for {
 		select {
 		case <-ctx.Done():

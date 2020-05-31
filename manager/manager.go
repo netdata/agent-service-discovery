@@ -13,26 +13,34 @@ import (
 	"github.com/netdata/sd/pipeline/tag"
 )
 
-type ConfigProvider interface {
-	Run(ctx context.Context)
-	Configs() chan []config.Config
-}
-
 type (
 	Manager struct {
 		prov ConfigProvider
 
-		create func(cfg config.PipelineConfig) (*pipeline.Pipeline, error)
+		factory factory
 
 		cache     map[string]uint64
 		pipelines map[string]func()
 	}
+	ConfigProvider interface {
+		Run(ctx context.Context)
+		Configs() chan []config.Config
+	}
+	sdPipeline interface {
+		Run(ctx context.Context)
+	}
+	factory interface {
+		create(cfg config.PipelineConfig) (sdPipeline, error)
+	}
+	factoryFunc func(cfg config.PipelineConfig) (sdPipeline, error)
 )
+
+func (f factoryFunc) create(cfg config.PipelineConfig) (sdPipeline, error) { return f(cfg) }
 
 func New(provider ConfigProvider) *Manager {
 	return &Manager{
 		prov:      provider,
-		create:    newPipeline,
+		factory:   factoryFunc(newPipeline),
 		cache:     make(map[string]uint64),
 		pipelines: make(map[string]func()),
 	}
@@ -88,7 +96,7 @@ func (m *Manager) process(ctx context.Context, cfg config.Config) {
 	}
 
 	if hash, ok := m.cache[cfg.Source]; !ok || hash != cfg.Pipeline.Hash() {
-		m.cache[cfg.Source] = hash
+		m.cache[cfg.Source] = cfg.Pipeline.Hash()
 		m.handleNewConfig(ctx, cfg)
 	}
 }
@@ -102,7 +110,7 @@ func (m *Manager) handleRemoveConfig(cfg config.Config) {
 }
 
 func (m *Manager) handleNewConfig(ctx context.Context, cfg config.Config) {
-	p, err := m.newPipeline(*cfg.Pipeline)
+	p, err := m.factory.create(*cfg.Pipeline)
 	if err != nil {
 		return
 	}
@@ -123,11 +131,7 @@ func (m *Manager) handleNewConfig(ctx context.Context, cfg config.Config) {
 	m.pipelines[cfg.Source] = stop
 }
 
-func (m *Manager) newPipeline(cfg config.PipelineConfig) (*pipeline.Pipeline, error) {
-	return m.create(cfg)
-}
-
-func newPipeline(cfg config.PipelineConfig) (*pipeline.Pipeline, error) {
+func newPipeline(cfg config.PipelineConfig) (sdPipeline, error) {
 	discoverer, err := discovery.New(cfg.Discovery)
 	if err != nil {
 		return nil, err
