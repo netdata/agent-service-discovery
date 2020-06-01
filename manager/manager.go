@@ -132,11 +132,7 @@ func (m *Manager) handleNewConfig(ctx context.Context, cfg config.Config) {
 }
 
 func newPipeline(cfg config.PipelineConfig) (sdPipeline, error) {
-	discoverer, err := discovery.New(cfg.Discovery)
-	if err != nil {
-		return nil, err
-	}
-	tagger, err := tag.New(cfg.Tag)
+	exporter, err := export.New(cfg.Export)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +140,11 @@ func newPipeline(cfg config.PipelineConfig) (sdPipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	exporter, err := export.New(cfg.Export)
+	tagger, err := tag.New(cfg.Tag)
+	if err != nil {
+		return nil, err
+	}
+	discoverer, err := discovery.New(cfg.Discovery)
 	if err != nil {
 		return nil, err
 	}

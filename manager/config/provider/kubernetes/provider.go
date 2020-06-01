@@ -69,6 +69,7 @@ func initProvider(cfg Config) (*Provider, error) {
 		client:    client,
 		configCh:  make(chan []config.Config),
 		started:   make(chan struct{}),
+		queue:     workqueue.NewNamed("cmap"),
 	}
 	return d, nil
 }
@@ -82,7 +83,6 @@ func (p *Provider) Configs() chan []config.Config {
 }
 
 func (p *Provider) Run(ctx context.Context) {
-	p.queue = workqueue.NewNamed("cmap")
 	defer p.queue.ShutDown()
 
 	p.inf = p.setupInformer(ctx)

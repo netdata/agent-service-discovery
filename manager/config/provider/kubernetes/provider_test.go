@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/util/workqueue"
 )
 
 func TestMain(m *testing.M) {
@@ -224,6 +225,7 @@ func prepareProvider(cfg Config, objects ...runtime.Object) (*Provider, v1.Confi
 		client:    client,
 		configCh:  make(chan []config.Config),
 		started:   make(chan struct{}),
+		queue:     workqueue.NewNamed("cmap"),
 	}
 	return provider, client.CoreV1().ConfigMaps(cfg.Namespace)
 }
