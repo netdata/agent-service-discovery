@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/netdata/sd/manager/config"
@@ -104,7 +103,6 @@ func (m *Manager) process(ctx context.Context, cfg config.Config) {
 func (m *Manager) handleRemoveConfig(cfg config.Config) {
 	if stop, ok := m.pipelines[cfg.Source]; ok {
 		delete(m.pipelines, cfg.Source)
-		fmt.Println("STOP", cfg.Source)
 		stop()
 	}
 }
@@ -116,10 +114,8 @@ func (m *Manager) handleNewConfig(ctx context.Context, cfg config.Config) {
 	}
 
 	if stop, ok := m.pipelines[cfg.Source]; ok {
-		fmt.Println("STOP", cfg.Source)
 		stop()
 	}
-	fmt.Println("START", cfg.Source)
 
 	var wg sync.WaitGroup
 	pipelineCtx, cancel := context.WithCancel(ctx)
