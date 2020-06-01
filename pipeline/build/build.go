@@ -7,164 +7,124 @@ import (
 	"text/template"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type (
-	Config     []RuleConfig // mandatory, at least 1
-	RuleConfig struct {
-		Name     string        `yaml:"name"`     // optional
-		Selector string        `yaml:"selector"` // mandatory
-		Tags     string        `yaml:"tags"`     // mandatory
-		Apply    []ApplyConfig `yaml:"apply"`    // mandatory, at least 1
-	}
-	ApplyConfig struct {
-		Selector string `yaml:"selector"` // mandatory
-		Tags     string `yaml:"tags"`     // optional
-		Template string `yaml:"template"` // mandatory
-	}
-)
-
-type (
-	builder interface {
-		Build(model.Target) []model.Config
-	}
 	Manager struct {
-		builders []builder
+		rules []*buildRule
+		buf   bytes.Buffer
+		log   zerolog.Logger
+	}
+	buildRule struct {
+		name  string
+		id    int
+		sr    model.Selector
+		tags  model.Tags
+		apply []*ruleApply
+	}
+	ruleApply struct {
+		id   int
+		sr   model.Selector
+		tags model.Tags
+		tmpl *template.Template
 	}
 )
 
 func New(cfg Config) (*Manager, error) {
 	if err := validateConfig(cfg); err != nil {
-		return nil, fmt.Errorf("build service config validation: %v", err)
+		return nil, fmt.Errorf("build manager config validation: %v", err)
 	}
 	mgr, err := initManager(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("build service initialization: %v", err)
+		return nil, fmt.Errorf("build manager initialization: %v", err)
 	}
 	return mgr, nil
 }
 
-func (m Manager) Build(target model.Target) []model.Config {
-	var configs []model.Config
-	for _, b := range m.builders {
-		configs = append(configs, b.Build(target)...)
-	}
-	return configs
-}
-
-type Rule struct {
-	name  string
-	sr    model.Selector
-	tags  model.Tags
-	apply []*RuleApply
-
-	buf bytes.Buffer
-}
-type RuleApply struct {
-	sr   model.Selector
-	tags model.Tags
-	tmpl *template.Template
-}
-
-func (r *Rule) Build(target model.Target) []model.Config {
-	if !r.sr.Matches(target.Tags()) {
-		return nil
-	}
-
-	var configs []model.Config
-	for _, apply := range r.apply {
-		if !apply.sr.Matches(target.Tags()) {
+func (m *Manager) Build(target model.Target) (configs []model.Config) {
+	for _, rule := range m.rules {
+		if !rule.sr.Matches(target.Tags()) {
 			continue
 		}
-		r.buf.Reset()
-		if err := apply.tmpl.Execute(&r.buf, target); err != nil {
-			continue
+
+		for _, apply := range rule.apply {
+			if !apply.sr.Matches(target.Tags()) {
+				continue
+			}
+
+			m.buf.Reset()
+			if err := apply.tmpl.Execute(&m.buf, target); err != nil {
+				m.log.Warn().Err(err).Msgf("failed to execute rule apply '%d/%d' on target '%s'",
+					rule.id, apply.id, target.TUID())
+				continue
+			}
+
+			cfg := model.Config{
+				Tags: model.NewTags(),
+				Conf: m.buf.String(),
+			}
+
+			cfg.Tags.Merge(rule.tags)
+			cfg.Tags.Merge(apply.tags)
+			configs = append(configs, cfg)
 		}
-		cfg := model.Config{
-			Tags: model.NewTags(),
-			Conf: r.buf.String(),
-		}
-		cfg.Tags.Merge(r.tags)
-		cfg.Tags.Merge(apply.tags)
-		configs = append(configs, cfg)
+	}
+	if len(configs) > 0 {
+		m.log.Info().Msgf("built %d config(s) for target '%s'", len(configs), target.TUID())
 	}
 	return configs
-}
-
-func validateConfig(cfg Config) error {
-	if len(cfg) == 0 {
-		return errors.New("empty config, need least 1 rule")
-	}
-	for i, ruleCfg := range cfg {
-		if ruleCfg.Selector == "" {
-			return fmt.Errorf("'rule->selector' not set (rule %s[%d])", ruleCfg.Name, i+1)
-		}
-
-		if ruleCfg.Tags == "" {
-			return fmt.Errorf("'rule->tags' not set (rule %s[%d])", ruleCfg.Name, i+1)
-		}
-		if len(ruleCfg.Apply) == 0 {
-			return fmt.Errorf("'rule->apply' not set (rule %s[%d])", ruleCfg.Name, i+1)
-		}
-
-		for ii, applyCfg := range ruleCfg.Apply {
-			if applyCfg.Selector == "" {
-				return fmt.Errorf("'rule->apply->selector' not set (rule %s[%d]/apply [%d])", ruleCfg.Name, i+1, ii+1)
-			}
-			if applyCfg.Template == "" {
-				return fmt.Errorf("'rule->apply->template' not set (rule %s[%d]/apply [%d])", ruleCfg.Name, i+1, ii+1)
-			}
-		}
-	}
-	return nil
 }
 
 func initManager(conf Config) (*Manager, error) {
 	if len(conf) == 0 {
 		return nil, errors.New("empty config")
 	}
+	mgr := &Manager{
+		log: log.New("build manager"),
+	}
 
-	var mgr Manager
-	for _, ruleCfg := range conf {
-		var rule Rule
-		sr, err := model.ParseSelector(ruleCfg.Selector)
-		if err != nil {
+	for i, cfg := range conf {
+		rule := buildRule{id: i + 1, name: cfg.Name}
+		if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 			return nil, err
+		} else {
+			rule.sr = sr
 		}
-		rule.sr = sr
 
-		tags, err := model.ParseTags(ruleCfg.Tags)
-		if err != nil {
+		if tags, err := model.ParseTags(cfg.Tags); err != nil {
 			return nil, err
+		} else {
+			rule.tags = tags
 		}
-		rule.tags = tags
 
-		for _, applyConf := range ruleCfg.Apply {
-			var apply RuleApply
-			sr, err := model.ParseSelector(applyConf.Selector)
-			if err != nil {
+		for i, cfg := range cfg.Apply {
+			apply := ruleApply{id: i + 1}
+			if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 				return nil, err
+			} else {
+				apply.sr = sr
 			}
-			apply.sr = sr
 
-			tags, err := model.ParseTags(applyConf.Tags)
-			if err != nil {
+			if tags, err := model.ParseTags(cfg.Tags); err != nil {
 				return nil, err
+			} else {
+				apply.tags = tags
 			}
-			apply.tags = tags
 
-			tmpl, err := parseTemplate(applyConf.Template)
-			if err != nil {
+			if tmpl, err := parseTemplate(cfg.Template); err != nil {
 				return nil, err
+			} else {
+				apply.tmpl = tmpl
 			}
-			apply.tmpl = tmpl
 
 			rule.apply = append(rule.apply, &apply)
 		}
-
-		mgr.builders = append(mgr.builders, &rule)
+		mgr.rules = append(mgr.rules, &rule)
 	}
-	return &mgr, nil
+	return mgr, nil
 }
 
 func parseTemplate(line string) (*template.Template, error) {

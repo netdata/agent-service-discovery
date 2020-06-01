@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type File struct {
@@ -17,12 +20,27 @@ type File struct {
 	cache cache
 	dump  bool
 	wr    *bufio.Writer
+	log   zerolog.Logger
+}
+
+func NewFile(sr model.Selector, file string) *File {
+	return &File{
+		sr:    sr,
+		file:  file,
+		cache: make(cache),
+		log:   log.New("file export"),
+	}
+}
+
+func (f File) String() string {
+	return fmt.Sprintf("file exporter (%s)", f.file)
 }
 
 func (f *File) Export(ctx context.Context, out <-chan []model.Config) {
-	const exportEvery = time.Second * 1
+	f.log.Info().Msg("instance is started")
+	defer f.log.Info().Msg("instance is stopped")
 
-	f.cache = make(cache)
+	const exportEvery = time.Second * 1
 	tk := time.NewTicker(exportEvery)
 	defer tk.Stop()
 
@@ -55,6 +73,7 @@ func (f *File) export() {
 	}
 	fi, err := os.Create(f.file)
 	if err != nil {
+		f.log.Warn().Err(err).Msg("failed to open file")
 		return
 	}
 	defer fi.Close()
@@ -71,6 +90,7 @@ func (f *File) export() {
 	_ = f.wr.Flush()
 
 	f.dump = false
+	f.log.Info().Msgf("wrote %d config(s) to '%s'", len(f.cache), f.file)
 }
 
 type Stdout struct {
@@ -80,10 +100,19 @@ type Stdout struct {
 	dump  bool
 }
 
+func newStdout() *Stdout {
+	return &Stdout{
+		sr:    model.MustParseSelector("*"),
+		cache: make(cache),
+	}
+}
+
+func (s Stdout) String() string {
+	return "stdout export"
+}
+
 func (s *Stdout) Export(ctx context.Context, out <-chan []model.Config) {
 	const exportEvery = time.Second * 1
-
-	s.cache = make(cache)
 	tk := time.NewTicker(exportEvery)
 	defer tk.Stop()
 

@@ -10,8 +10,10 @@ import (
 
 	"github.com/netdata/sd/pipeline/model"
 	"github.com/netdata/sd/pkg/k8s"
+	"github.com/netdata/sd/pkg/log"
 
 	"github.com/mitchellh/hashstructure"
+	"github.com/rs/zerolog"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,12 +71,13 @@ type (
 		client        kubernetes.Interface
 		discoverers   []discoverer
 		started       chan struct{}
+		log           zerolog.Logger
 	}
 )
 
 func NewDiscovery(cfg Config) (*Discovery, error) {
 	if err := validateConfig(cfg); err != nil {
-		return nil, fmt.Errorf("k8s config validation: %v", err)
+		return nil, fmt.Errorf("k8s discovery config validation: %v", err)
 	}
 
 	d, err := initDiscovery(cfg)
@@ -110,8 +113,13 @@ func initDiscovery(cfg Config) (*Discovery, error) {
 		client:        client,
 		discoverers:   make([]discoverer, 0, len(namespaces)),
 		started:       make(chan struct{}),
+		log:           log.New("k8s discovery manager"),
 	}
 	return d, nil
+}
+
+func (d *Discovery) String() string {
+	return "k8s discovery manager"
 }
 
 const resyncPeriod = 10 * time.Minute
@@ -132,6 +140,8 @@ func (d *Discovery) Discover(ctx context.Context, in chan<- []model.Group) {
 	if len(d.discoverers) == 0 {
 		panic("k8s cant run discovery: zero discoverers")
 	}
+
+	d.log.Info().Msgf("registered: %v", d.discoverers)
 
 	var wg sync.WaitGroup
 	updates := make(chan []model.Group)

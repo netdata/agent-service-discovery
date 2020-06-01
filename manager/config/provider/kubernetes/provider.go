@@ -8,7 +8,9 @@ import (
 
 	"github.com/netdata/sd/manager/config"
 	"github.com/netdata/sd/pkg/k8s"
+	"github.com/netdata/sd/pkg/log"
 
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +46,7 @@ type Provider struct {
 	queue     *workqueue.Type
 	configCh  chan []config.Config
 	started   chan struct{}
+	log       zerolog.Logger
 }
 
 func NewProvider(cfg Config) (*Provider, error) {
@@ -62,7 +65,7 @@ func initProvider(cfg Config) (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Provider{
+	p := &Provider{
 		namespace: cfg.Namespace,
 		cmap:      cfg.ConfigMap,
 		cmapKey:   cfg.Key,
@@ -70,8 +73,9 @@ func initProvider(cfg Config) (*Provider, error) {
 		configCh:  make(chan []config.Config),
 		started:   make(chan struct{}),
 		queue:     workqueue.NewNamed("cmap"),
+		log:       log.New("k8s config provider"),
 	}
-	return d, nil
+	return p, nil
 }
 
 func (p Provider) String() string {
@@ -83,12 +87,15 @@ func (p *Provider) Configs() chan []config.Config {
 }
 
 func (p *Provider) Run(ctx context.Context) {
+	p.log.Info().Msg("instance is started")
+	defer p.log.Info().Msg("instance is stopped")
 	defer p.queue.ShutDown()
 
 	p.inf = p.setupInformer(ctx)
 	go p.inf.Run(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(), p.inf.HasSynced) {
+		p.log.Error().Msg("failed to sync caches")
 		return
 	}
 
@@ -167,11 +174,14 @@ func (p *Provider) run(ctx context.Context) {
 
 			data, ok := cmap.Data[p.cmapKey]
 			if !ok {
+				p.log.Debug().Msgf("cmap '%s/%s' has no '%s' key", cmap.Namespace, cmap.Name, p.cmapKey)
 				p.send(ctx, cfg)
 				return
 			}
 
 			if err := yaml.Unmarshal([]byte(data), &cfg.Pipeline); err != nil {
+				p.log.Error().Err(err).Msgf("unable to decode '%s/%s' key '%s'",
+					cmap.Namespace, cmap.Name, p.cmapKey)
 				return
 			}
 			p.send(ctx, cfg)

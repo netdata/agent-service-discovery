@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/netdata/sd/manager/config"
+	"github.com/netdata/sd/pkg/log"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v2"
 )
 
@@ -21,6 +23,7 @@ type (
 		cache        cache
 		refreshEvery time.Duration
 		configCh     chan []config.Config
+		log          zerolog.Logger
 	}
 	cache map[string]time.Time
 )
@@ -29,8 +32,9 @@ func NewProvider(paths []string) *Provider {
 	return &Provider{
 		paths:        paths,
 		cache:        make(cache),
-		refreshEvery: time.Second * 10,
+		refreshEvery: time.Minute,
 		configCh:     make(chan []config.Config),
+		log:          log.New("file config provider"),
 	}
 }
 
@@ -44,8 +48,12 @@ func (p *Provider) Configs() chan []config.Config {
 }
 
 func (p *Provider) Run(ctx context.Context) {
+	p.log.Info().Msg("instance is started")
+	defer p.log.Info().Msg("instance is stopped")
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
+		p.log.Error().Err(err).Msg("failed to initialize fsnotify watcher")
 		return
 	}
 
@@ -80,8 +88,7 @@ func (p *Provider) Run(ctx context.Context) {
 			p.refresh(ctx)
 		case err := <-p.watcher.Errors:
 			if err != nil {
-				// TODO: fix
-				_ = err
+				p.log.Warn().Err(err).Msg("watch error event")
 			}
 		}
 	}
@@ -99,7 +106,11 @@ func (p *Provider) refresh(ctx context.Context) {
 
 	for _, file := range p.listFiles() {
 		fi, err := os.Lstat(file)
-		if err != nil || !fi.Mode().IsRegular() {
+		if err != nil {
+			p.log.Warn().Err(err).Msgf("failed to lstat '%s'", file)
+			continue
+		}
+		if !fi.Mode().IsRegular() {
 			continue
 		}
 
@@ -115,6 +126,8 @@ func (p *Provider) refresh(ctx context.Context) {
 			added = append(added, config.Config{Pipeline: &cfg, Source: file})
 		case io.EOF:
 			removed = append(removed, config.Config{Source: file})
+		default:
+			p.log.Warn().Err(err).Msgf("failed to load '%s'", file)
 		}
 	}
 
@@ -158,8 +171,7 @@ func (p *Provider) watchDirs() {
 			path = "./"
 		}
 		if err := p.watcher.Add(path); err != nil {
-			// TODO: fix
-			_ = err
+			p.log.Warn().Err(err).Msgf("failed to start watching '%s'", path)
 		}
 	}
 }

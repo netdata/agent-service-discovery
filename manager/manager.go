@@ -10,16 +10,18 @@ import (
 	"github.com/netdata/sd/pipeline/discovery"
 	"github.com/netdata/sd/pipeline/export"
 	"github.com/netdata/sd/pipeline/tag"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type (
 	Manager struct {
-		prov ConfigProvider
-
-		factory factory
-
+		prov      ConfigProvider
+		factory   factory
 		cache     map[string]uint64
 		pipelines map[string]func()
+		log       zerolog.Logger
 	}
 	ConfigProvider interface {
 		Run(ctx context.Context)
@@ -42,11 +44,15 @@ func New(provider ConfigProvider) *Manager {
 		factory:   factoryFunc(newPipeline),
 		cache:     make(map[string]uint64),
 		pipelines: make(map[string]func()),
+		log:       log.New("pipeline manager"),
 	}
 }
 
 func (m *Manager) Run(ctx context.Context) {
+	m.log.Info().Msg("instance is started")
+	defer m.log.Info().Msg("instance is stopped")
 	defer m.cleanup()
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -102,6 +108,7 @@ func (m *Manager) process(ctx context.Context, cfg config.Config) {
 
 func (m *Manager) handleRemoveConfig(cfg config.Config) {
 	if stop, ok := m.pipelines[cfg.Source]; ok {
+		m.log.Info().Msgf("received an empty config, stopping the pipeline ('%s')", cfg.Source)
 		delete(m.pipelines, cfg.Source)
 		stop()
 	}
@@ -110,11 +117,20 @@ func (m *Manager) handleRemoveConfig(cfg config.Config) {
 func (m *Manager) handleNewConfig(ctx context.Context, cfg config.Config) {
 	p, err := m.factory.create(*cfg.Pipeline)
 	if err != nil {
+		if _, ok := m.pipelines[cfg.Source]; ok {
+			m.log.Warn().Err(err).Msgf("unable to create a pipeline, will keep using old config ('%s')",
+				cfg.Source)
+		} else {
+			m.log.Warn().Err(err).Msgf("unable to create a pipeline ('%s')", cfg.Source)
+		}
 		return
 	}
 
 	if stop, ok := m.pipelines[cfg.Source]; ok {
+		m.log.Info().Msgf("received an updated config, restarting the pipeline ('%s')", cfg.Source)
 		stop()
+	} else {
+		m.log.Info().Msgf("received a new config, starting a new pipeline ('%s')", cfg.Source)
 	}
 
 	var wg sync.WaitGroup
