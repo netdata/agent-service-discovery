@@ -95,7 +95,7 @@ func (p *Provider) Run(ctx context.Context) {
 	go p.inf.Run(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(), p.inf.HasSynced) {
-		p.log.Error().Msg("unable to sync caches")
+		p.log.Error().Msg("failed to sync caches")
 		return
 	}
 
@@ -180,7 +180,8 @@ func (p *Provider) run(ctx context.Context) {
 			}
 
 			if err := yaml.Unmarshal([]byte(data), &cfg.Pipeline); err != nil {
-				p.log.Error().Err(err).Msgf("decode cmap '%s/%s' key '%s'", cmap.Namespace, cmap.Name, p.cmapKey)
+				p.log.Error().Err(err).Msgf("unable to decode '%s/%s' key '%s'",
+					cmap.Namespace, cmap.Name, p.cmapKey)
 				return
 			}
 			p.send(ctx, cfg)

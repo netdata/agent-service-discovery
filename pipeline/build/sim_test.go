@@ -39,10 +39,10 @@ func (sim buildSim) run(t *testing.T) {
 	}
 
 	for i, input := range sim.inputs {
-		name := fmt.Sprintf("input:'%s'[%d], target:'%s', wantConfigs:'%v'",
+		name := fmt.Sprintf("input:'%s'[%d], target:'%s', expected configs:'%v'",
 			input.desc, i+1, input.target, input.expectedCfgs)
 
-		actualCfgs := mgr.Build(input.target)
-		assert.Equalf(t, input.expectedCfgs, actualCfgs, name)
+		actual := mgr.Build(input.target)
+		assert.Equalf(t, input.expectedCfgs, actual, name)
 	}
 }

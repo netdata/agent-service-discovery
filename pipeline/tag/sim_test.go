@@ -39,7 +39,7 @@ func (sim tagSim) run(t *testing.T) {
 	}
 
 	for i, input := range sim.inputs {
-		name := fmt.Sprintf("input:'%s'[%d], target:'%s', wantTags:'%s'",
+		name := fmt.Sprintf("input:'%s'[%d], target:'%s', expected tags:'%s'",
 			input.desc, i+1, input.target, input.expectedTags)
 
 		mgr.Tag(input.target)

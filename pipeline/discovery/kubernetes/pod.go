@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
 
+	"github.com/rs/zerolog"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -53,6 +55,7 @@ type Pod struct {
 	cmapInformer   cache.SharedInformer
 	secretInformer cache.SharedInformer
 	queue          *workqueue.Type
+	log            zerolog.Logger
 }
 
 func NewPod(pod, cmap, secret cache.SharedInformer) *Pod {
@@ -71,14 +74,17 @@ func NewPod(pod, cmap, secret cache.SharedInformer) *Pod {
 		cmapInformer:   cmap,
 		secretInformer: secret,
 		queue:          queue,
+		log:            log.New("k8s pod discovery"),
 	}
 }
 
 func (p Pod) String() string {
-	return fmt.Sprintf("k8s role: %s", RolePod)
+	return fmt.Sprintf("k8s %s discovery", RolePod)
 }
 
 func (p *Pod) Discover(ctx context.Context, in chan<- []model.Group) {
+	p.log.Info().Msg("instance is started")
+	defer p.log.Info().Msg("instance is stopped")
 	defer p.queue.ShutDown()
 
 	go p.podInformer.Run(ctx.Done())
@@ -87,6 +93,7 @@ func (p *Pod) Discover(ctx context.Context, in chan<- []model.Group) {
 
 	if !cache.WaitForCacheSync(ctx.Done(),
 		p.podInformer.HasSynced, p.cmapInformer.HasSynced, p.secretInformer.HasSynced) {
+		p.log.Error().Msg("failed to sync caches")
 		return
 	}
 

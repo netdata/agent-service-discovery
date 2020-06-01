@@ -53,7 +53,7 @@ func (p *Provider) Run(ctx context.Context) {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		p.log.Error().Err(err).Msg("unable to initialize fsnotify watcher")
+		p.log.Error().Err(err).Msg("failed to initialize fsnotify watcher")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (p *Provider) refresh(ctx context.Context) {
 	for _, file := range p.listFiles() {
 		fi, err := os.Lstat(file)
 		if err != nil {
-			p.log.Warn().Err(err).Msgf("unable to lstat '%s'", file)
+			p.log.Warn().Err(err).Msgf("failed to lstat '%s'", file)
 			continue
 		}
 		if !fi.Mode().IsRegular() {
@@ -127,7 +127,7 @@ func (p *Provider) refresh(ctx context.Context) {
 		case io.EOF:
 			removed = append(removed, config.Config{Source: file})
 		default:
-			p.log.Warn().Err(err).Msgf("unable to load '%s'", file)
+			p.log.Warn().Err(err).Msgf("failed to load '%s'", file)
 		}
 	}
 
@@ -171,7 +171,7 @@ func (p *Provider) watchDirs() {
 			path = "./"
 		}
 		if err := p.watcher.Add(path); err != nil {
-			p.log.Warn().Err(err).Msgf("unable to start watching '%s'", path)
+			p.log.Warn().Err(err).Msgf("failed to start watching '%s'", path)
 		}
 	}
 }

@@ -35,11 +35,11 @@ type (
 
 func New(cfg Config) (*Manager, error) {
 	if err := validateConfig(cfg); err != nil {
-		return nil, fmt.Errorf("build service config validation: %v", err)
+		return nil, fmt.Errorf("build manager config validation: %v", err)
 	}
 	mgr, err := initManager(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("build service initialization: %v", err)
+		return nil, fmt.Errorf("build manager initialization: %v", err)
 	}
 	return mgr, nil
 }
@@ -72,6 +72,9 @@ func (m *Manager) Build(target model.Target) (configs []model.Config) {
 			configs = append(configs, cfg)
 		}
 	}
+	if len(configs) > 0 {
+		m.log.Info().Msgf("built %d config(s) for target '%s'", len(configs), target.TUID())
+	}
 	return configs
 }
 
@@ -84,7 +87,7 @@ func initManager(conf Config) (*Manager, error) {
 	}
 
 	for i, cfg := range conf {
-		rule := buildRule{id: i + 1}
+		rule := buildRule{id: i + 1, name: cfg.Name}
 		if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 			return nil, err
 		} else {

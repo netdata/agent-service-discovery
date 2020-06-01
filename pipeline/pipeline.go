@@ -5,6 +5,9 @@ import (
 	"sync"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type Discoverer interface {
@@ -31,6 +34,7 @@ type (
 		Exporter
 
 		cache cache
+		log   zerolog.Logger
 	}
 	cache      map[string]groupCache // source:hash:configs
 	groupCache map[uint64][]model.Config
@@ -43,10 +47,14 @@ func New(discoverer Discoverer, tagger Tagger, builder Builder, exporter Exporte
 		Builder:    builder,
 		Exporter:   exporter,
 		cache:      make(cache),
+		log:        log.New("pipeline"),
 	}
 }
 
 func (p *Pipeline) Run(ctx context.Context) {
+	p.log.Info().Msg("instance is started")
+	defer p.log.Info().Msg("instance is stopped")
+
 	var wg sync.WaitGroup
 	disc := make(chan []model.Group)
 	exp := make(chan []model.Config)

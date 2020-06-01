@@ -8,6 +8,9 @@ import (
 
 	"github.com/netdata/sd/pipeline/discovery/kubernetes"
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type Config struct {
@@ -30,6 +33,7 @@ type (
 		send        chan struct{}
 		sendEvery   time.Duration
 		cache       *cache
+		log         zerolog.Logger
 	}
 )
 
@@ -37,25 +41,24 @@ func New(cfg Config) (*Manager, error) {
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}
-
 	mgr := &Manager{
 		send:        make(chan struct{}, 1),
 		sendEvery:   5 * time.Second,
 		discoverers: make([]discoverer, 0),
 		cache:       newCache(),
+		log:         log.New("discovery manager"),
 	}
-
 	if err := mgr.registerDiscoverers(cfg); err != nil {
 		return nil, err
 	}
+
+	mgr.log.Info().Msgf("registered: %v", mgr.discoverers)
 	return mgr, nil
 }
 
-func (m *Manager) registerDiscoverers(cfg Config) error {
-	m.discoverers = m.discoverers[:0]
-
-	for _, k8sCfg := range cfg.K8S {
-		d, err := kubernetes.NewDiscovery(k8sCfg)
+func (m *Manager) registerDiscoverers(conf Config) error {
+	for _, cfg := range conf.K8S {
+		d, err := kubernetes.NewDiscovery(cfg)
 		if err != nil {
 			return err
 		}
@@ -65,6 +68,9 @@ func (m *Manager) registerDiscoverers(cfg Config) error {
 }
 
 func (m *Manager) Discover(ctx context.Context, in chan<- []model.Group) {
+	m.log.Info().Msg("instance is started")
+	defer m.log.Info().Msg("instance is stopped")
+
 	var wg sync.WaitGroup
 
 	for _, d := range m.discoverers {

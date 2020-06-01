@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
 
+	"github.com/rs/zerolog"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -47,6 +49,7 @@ func (sg serviceGroup) Targets() []model.Target { return sg.targets }
 type Service struct {
 	informer cache.SharedInformer
 	queue    *workqueue.Type
+	log      zerolog.Logger
 }
 
 func NewService(inf cache.SharedInformer) *Service {
@@ -60,19 +63,23 @@ func NewService(inf cache.SharedInformer) *Service {
 	return &Service{
 		informer: inf,
 		queue:    queue,
+		log:      log.New("k8s service discovery"),
 	}
 }
 
 func (s Service) String() string {
-	return fmt.Sprintf("k8s role: %s", RoleService)
+	return fmt.Sprintf("k8s %s discovery", RoleService)
 }
 
 func (s *Service) Discover(ctx context.Context, ch chan<- []model.Group) {
+	s.log.Info().Msg("instance is started")
+	defer s.log.Info().Msg("instance is stopped")
 	defer s.queue.ShutDown()
 
 	go s.informer.Run(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(), s.informer.HasSynced) {
+		s.log.Error().Msg("failed to sync caches")
 		return
 	}
 

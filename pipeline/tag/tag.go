@@ -36,11 +36,11 @@ type (
 
 func New(cfg Config) (*Manager, error) {
 	if err := validateConfig(cfg); err != nil {
-		return nil, fmt.Errorf("tag service config validation: %v", err)
+		return nil, fmt.Errorf("tag manager config validation: %v", err)
 	}
 	mgr, err := initManager(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("tag service initialization: %v", err)
+		return nil, fmt.Errorf("tag manager initialization: %v", err)
 	}
 	return mgr, nil
 }
@@ -68,6 +68,7 @@ func (m *Manager) Tag(target model.Target) {
 
 			target.Tags().Merge(rule.tags)
 			target.Tags().Merge(match.tags)
+			m.log.Debug().Msgf("matched target '%s', tags: %s", target.TUID(), target.Tags())
 		}
 	}
 }
@@ -82,7 +83,7 @@ func initManager(conf Config) (*Manager, error) {
 		log:   log.New("tag manager"),
 	}
 	for i, cfg := range conf {
-		rule := tagRule{id: i + 1}
+		rule := tagRule{id: i + 1, name: cfg.Name}
 		if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 			return nil, err
 		} else {

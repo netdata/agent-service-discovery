@@ -22,12 +22,12 @@ func New(name string) zerolog.Logger {
 		return zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).
 			With().
 			Timestamp().
-			Str("unit", name).
+			Str("component", name).
 			Logger()
 	}
 	return zerolog.New(Output).
 		With().
-		Str("unit", name).
+		Str("component", name).
 		Timestamp().
 		Logger()
 }
