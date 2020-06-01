@@ -69,43 +69,53 @@ func (s Service) String() string {
 
 func (s *Service) Discover(ctx context.Context, ch chan<- []model.Group) {
 	defer s.queue.ShutDown()
+
 	go s.informer.Run(ctx.Done())
+
 	if !cache.WaitForCacheSync(ctx.Done(), s.informer.HasSynced) {
 		return
 	}
-	go func() {
-		for s.processOnce(ctx, ch) {
-		}
-	}()
+
+	go s.run(ctx, ch)
 	<-ctx.Done()
 }
 
-func (s *Service) processOnce(ctx context.Context, ch chan<- []model.Group) bool {
-	item, shutdown := s.queue.Get()
-	if shutdown {
-		return false
-	}
-	defer s.queue.Done(item)
+func (s *Service) run(ctx context.Context, ch chan<- []model.Group) {
+	for {
+		item, shutdown := s.queue.Get()
+		if shutdown {
+			return
+		}
 
-	key := item.(string)
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return true
+		func() {
+			defer s.queue.Done(item)
+
+			key := item.(string)
+			namespace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				return
+			}
+
+			item, exists, err := s.informer.GetStore().GetByKey(key)
+			if err != nil {
+				return
+			}
+
+			if !exists {
+				group := &serviceGroup{source: serviceSourceFromNsName(namespace, name)}
+				send(ctx, ch, group)
+				return
+			}
+
+			svc, err := toService(item)
+			if err != nil {
+				return
+			}
+
+			group := s.buildGroup(svc)
+			send(ctx, ch, group)
+		}()
 	}
-	item, exists, err := s.informer.GetStore().GetByKey(key)
-	if err != nil {
-		return true
-	}
-	if !exists {
-		send(ctx, ch, &serviceGroup{source: serviceSourceFromNsName(namespace, name)})
-		return true
-	}
-	svc, err := toService(item)
-	if err != nil {
-		return true
-	}
-	send(ctx, ch, s.buildGroup(svc))
-	return true
 }
 
 func (s Service) buildGroup(svc *apiv1.Service) model.Group {

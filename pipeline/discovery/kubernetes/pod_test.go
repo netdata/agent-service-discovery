@@ -3,17 +3,18 @@ package kubernetes
 import (
 	"context"
 	"encoding/base64"
-	"k8s.io/client-go/tools/cache"
 	"net"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/netdata/sd/pipeline/model"
+
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 )
 
 func TestPodGroup_Source(t *testing.T) {

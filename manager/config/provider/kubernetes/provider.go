@@ -178,6 +178,13 @@ func (p *Provider) run(ctx context.Context) {
 	}
 }
 
+func (p *Provider) send(ctx context.Context, cfg config.Config) {
+	select {
+	case <-ctx.Done():
+	case p.configCh <- []config.Config{cfg}:
+	}
+}
+
 func source(ns, name, key string) string {
 	return fmt.Sprintf("k8s/cmap/%s/%s:%s", ns, name, key)
 }
@@ -188,11 +195,4 @@ func toConfigMap(item interface{}) (*apiv1.ConfigMap, error) {
 		return nil, fmt.Errorf("received unexpected object type: %T", item)
 	}
 	return cmap, nil
-}
-
-func (p *Provider) send(ctx context.Context, cfg config.Config) {
-	select {
-	case <-ctx.Done():
-	case p.configCh <- []config.Config{cfg}:
-	}
 }

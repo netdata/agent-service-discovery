@@ -69,15 +69,20 @@ func TestProvider_Configs(t *testing.T) {
 	assert.NotNil(t, p.Configs())
 }
 
+const (
+	validKey   = "valid.yml"
+	invalidKey = "invalid.yml"
+)
+
 func TestProvider_Run(t *testing.T) {
 	tests := map[string]func() runSim{
 		"cmap exists before start": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: validKey}
 			cmap := prepareConfigMap("cmap")
 			provider, _ := prepareProvider(cfg, cmap)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap, "valid.yml"),
+				cmapKeyToConfig(cmap, validKey),
 			}
 
 			sim := runSim{
@@ -87,12 +92,12 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"cmap added after start": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: validKey}
 			cmap := prepareConfigMap("cmap")
 			provider, client := prepareProvider(cfg)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap, "valid.yml"),
+				cmapKeyToConfig(cmap, validKey),
 			}
 
 			sim := runSim{
@@ -106,13 +111,13 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"cmap deleted after start": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: validKey}
 			cmap := prepareConfigMap("cmap")
 			provider, client := prepareProvider(cfg, cmap)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap, "valid.yml"),
-				{Source: source(cmap.Namespace, cmap.Name, "valid.yml")},
+				cmapKeyToConfig(cmap, validKey),
+				{Source: source(cmap.Namespace, cmap.Name, validKey)},
 			}
 
 			sim := runSim{
@@ -126,21 +131,21 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"cmap updated after start": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: validKey}
 			cmap := prepareConfigMap("cmap")
-			cmapUpdated := cmap.DeepCopy()
-			cmapUpdated.Data["key"] = "value"
 			provider, client := prepareProvider(cfg, cmap)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap, "valid.yml"),
-				cmapKeyToConfig(cmap, "valid.yml"),
+				cmapKeyToConfig(cmap, validKey),
+				cmapKeyToConfig(cmap, validKey),
 			}
 
 			sim := runSim{
 				provider: provider,
 				runAfterSync: func(ctx context.Context) {
 					time.Sleep(time.Millisecond * 50)
+					cmapUpdated := cmap.DeepCopy()
+					cmapUpdated.Data["key"] = "value"
 					_, _ = client.Update(ctx, cmapUpdated, metav1.UpdateOptions{})
 				},
 				expectedConfigs: expected,
@@ -148,14 +153,14 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"several cmaps exist before run": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap1", Key: "valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap1", Key: validKey}
 			cmap1 := prepareConfigMap("cmap1")
 			cmap2 := prepareConfigMap("cmap2")
 			cmap3 := prepareConfigMap("cmap3")
 			provider, _ := prepareProvider(cfg, cmap1, cmap2, cmap3)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap1, "valid.yml"),
+				cmapKeyToConfig(cmap1, validKey),
 			}
 
 			sim := runSim{
@@ -165,12 +170,12 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"cmap exists, but has no needed key": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "-valid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "missing"}
 			cmap := prepareConfigMap("cmap")
 			provider, _ := prepareProvider(cfg, cmap)
 
 			expected := []config.Config{
-				cmapKeyToConfig(cmap, "-valid.yml"),
+				cmapKeyToConfig(cmap, "missing"),
 			}
 
 			sim := runSim{
@@ -180,7 +185,7 @@ func TestProvider_Run(t *testing.T) {
 			return sim
 		},
 		"cmap exists, but key format is invalid": func() runSim {
-			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: "invalid.yml"}
+			cfg := Config{Namespace: "default", ConfigMap: "cmap", Key: invalidKey}
 			cmap := prepareConfigMap("cmap")
 			provider, _ := prepareProvider(cfg, cmap)
 
@@ -204,8 +209,8 @@ func prepareConfigMap(name string) *apiv1.ConfigMap {
 			UID:       types.UID("a03b8dc6-dc40-46dc-b571-5030e69d8167" + name),
 		},
 		Data: map[string]string{
-			"valid.yml":   validConfig,
-			"invalid.yml": "invalid",
+			validKey:   validConfig,
+			invalidKey: "invalid",
 		},
 	}
 }

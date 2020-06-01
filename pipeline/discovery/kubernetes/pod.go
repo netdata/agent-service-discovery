@@ -89,39 +89,47 @@ func (p *Pod) Discover(ctx context.Context, in chan<- []model.Group) {
 		p.podInformer.HasSynced, p.cmapInformer.HasSynced, p.secretInformer.HasSynced) {
 		return
 	}
-	go func() {
-		for p.processOnce(ctx, in) {
-		}
-	}()
+
+	go p.run(ctx, in)
 	<-ctx.Done()
 }
 
-func (p *Pod) processOnce(ctx context.Context, in chan<- []model.Group) bool {
-	item, shutdown := p.queue.Get()
-	if shutdown {
-		return false
-	}
-	defer p.queue.Done(item)
+func (p *Pod) run(ctx context.Context, in chan<- []model.Group) {
+	for {
+		item, shutdown := p.queue.Get()
+		if shutdown {
+			return
+		}
 
-	key := item.(string)
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return true
+		func() {
+			defer p.queue.Done(item)
+
+			key := item.(string)
+			namespace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				return
+			}
+
+			item, exists, err := p.podInformer.GetStore().GetByKey(key)
+			if err != nil {
+				return
+			}
+
+			if !exists {
+				group := &podGroup{source: podSourceFromNsName(namespace, name)}
+				send(ctx, in, group)
+				return
+			}
+
+			pod, err := toPod(item)
+			if err != nil {
+				return
+			}
+
+			group := p.buildGroup(pod)
+			send(ctx, in, group)
+		}()
 	}
-	item, exists, err := p.podInformer.GetStore().GetByKey(key)
-	if err != nil {
-		return true
-	}
-	if !exists {
-		send(ctx, in, &podGroup{source: podSourceFromNsName(namespace, name)})
-		return true
-	}
-	pod, err := toPod(item)
-	if err != nil {
-		return true
-	}
-	send(ctx, in, p.buildGroup(pod))
-	return true
 }
 
 func (p Pod) buildGroup(pod *apiv1.Pod) model.Group {
