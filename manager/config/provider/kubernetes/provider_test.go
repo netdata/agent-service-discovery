@@ -2,13 +2,16 @@ package kubernetes
 
 import (
 	"context"
-	"gopkg.in/yaml.v2"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/netdata/sd/manager/config"
+	"github.com/netdata/sd/pkg/k8s"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +19,13 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
+
+func TestMain(m *testing.M) {
+	_ = os.Setenv(k8s.EnvFakeClient, "true")
+	code := m.Run()
+	_ = os.Unsetenv(k8s.EnvFakeClient)
+	os.Exit(code)
+}
 
 func TestNewProvider(t *testing.T) {
 	tests := map[string]struct {
