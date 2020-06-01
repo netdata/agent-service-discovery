@@ -73,7 +73,7 @@ func (m *Manager) Discover(ctx context.Context, in chan<- []model.Group) {
 	}
 
 	wg.Add(1)
-	go func() { defer wg.Done(); m.sendLoop(ctx, in) }()
+	go func() { defer wg.Done(); m.run(ctx, in) }()
 
 	wg.Wait()
 	<-ctx.Done()
@@ -102,7 +102,7 @@ func (m *Manager) runDiscoverer(ctx context.Context, d discoverer) {
 	}
 }
 
-func (m *Manager) sendLoop(ctx context.Context, in chan<- []model.Group) {
+func (m *Manager) run(ctx context.Context, in chan<- []model.Group) {
 	tk := time.NewTicker(m.sendEvery)
 	defer tk.Stop()
 

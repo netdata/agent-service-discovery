@@ -154,7 +154,7 @@ func TestManager_Tag(t *testing.T) {
 					},
 				},
 			},
-			values: []tagSimValue{
+			inputs: []tagSimInput{
 				{
 					desc:         "all rules fail",
 					target:       mockTarget{tags: model.Tags{"unknown": {}}, Class: "fighter", Race: "orc", Level: 9001},
@@ -207,7 +207,7 @@ func TestRule_Tag(t *testing.T) {
 					},
 				},
 			},
-			values: []tagSimValue{
+			inputs: []tagSimInput{
 				{
 					desc:         "not match rule selector",
 					target:       mockTarget{Class: "fighter"},
@@ -254,7 +254,7 @@ func TestRule_Tag_UseCustomFunction(t *testing.T) {
 					},
 				},
 			},
-			values: []tagSimValue{
+			inputs: []tagSimInput{
 				{
 					target:       mockTarget{Class: "wizard", tags: model.Tags{"key": {}}},
 					expectedTags: model.Tags{"key": {}, "wizard": {}},

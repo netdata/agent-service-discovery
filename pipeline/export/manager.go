@@ -79,25 +79,29 @@ func (m *Manager) Export(ctx context.Context, out <-chan []model.Config) {
 	}
 
 	wg.Add(1)
-	go func() { defer wg.Done(); m.exportLoop(ctx, out, outs) }()
+	go func() { defer wg.Done(); m.run(ctx, out, outs) }()
 
 	wg.Wait()
 	<-ctx.Done()
 }
 
-func (m Manager) exportLoop(ctx context.Context, out <-chan []model.Config, outs []chan<- []model.Config) {
+func (m Manager) run(ctx context.Context, out <-chan []model.Config, outs []chan<- []model.Config) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case cfgs := <-out:
-			for _, eOut := range outs {
-				select {
-				case <-ctx.Done():
-					return
-				case eOut <- cfgs:
-				}
-			}
+			m.notify(ctx, cfgs, outs)
+		}
+	}
+}
+
+func (m Manager) notify(ctx context.Context, cfgs []model.Config, outs []chan<- []model.Config) {
+	for _, out := range outs {
+		select {
+		case <-ctx.Done():
+			return
+		case out <- cfgs:
 		}
 	}
 }

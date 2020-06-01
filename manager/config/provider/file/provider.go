@@ -80,6 +80,8 @@ func (p *Provider) Run(ctx context.Context) {
 			p.refresh(ctx)
 		case err := <-p.watcher.Errors:
 			if err != nil {
+				// TODO: fix
+				_ = err
 			}
 		}
 	}
@@ -156,6 +158,8 @@ func (p *Provider) watchDirs() {
 			path = "./"
 		}
 		if err := p.watcher.Add(path); err != nil {
+			// TODO: fix
+			_ = err
 		}
 	}
 }

@@ -14,12 +14,12 @@ type (
 	buildSim struct {
 		cfg     Config
 		invalid bool
-		values  []buildSimValue
+		inputs  []buildSimInput
 	}
-	buildSimValue struct {
-		desc     string
-		target   mockTarget
-		wantCfgs []model.Config
+	buildSimInput struct {
+		desc         string
+		target       mockTarget
+		expectedCfgs []model.Config
 	}
 )
 
@@ -34,15 +34,15 @@ func (sim buildSim) run(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, mgr)
 
-	if len(sim.values) == 0 {
+	if len(sim.inputs) == 0 {
 		return
 	}
 
-	for i, value := range sim.values {
-		name := fmt.Sprintf("test value:'%s'[%d], target:'%s', wantConfigs:'%v'",
-			value.desc, i+1, value.target, value.wantCfgs)
+	for i, input := range sim.inputs {
+		name := fmt.Sprintf("input:'%s'[%d], target:'%s', wantConfigs:'%v'",
+			input.desc, i+1, input.target, input.expectedCfgs)
 
-		actualCfgs := mgr.Build(value.target)
-		assert.Equalf(t, value.wantCfgs, actualCfgs, name)
+		actualCfgs := mgr.Build(input.target)
+		assert.Equalf(t, input.expectedCfgs, actualCfgs, name)
 	}
 }

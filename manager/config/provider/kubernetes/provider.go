@@ -94,6 +94,7 @@ func (p *Provider) Run(ctx context.Context) {
 
 	go p.run(ctx)
 	close(p.started)
+
 	<-ctx.Done()
 }
 

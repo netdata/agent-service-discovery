@@ -157,14 +157,14 @@ func TestManager_Build(t *testing.T) {
 					},
 				},
 			},
-			values: []buildSimValue{
+			inputs: []buildSimInput{
 				{
 					desc: "1st rule match",
 					target: mockTarget{
 						tag:   model.Tags{"class": {}},
 						Class: "fighter", Race: "orc", Level: 9001,
 					},
-					wantCfgs: []model.Config{
+					expectedCfgs: []model.Config{
 						{Conf: "Class: fighter", Tags: model.Tags{"built": {}}},
 					},
 				},
@@ -174,7 +174,7 @@ func TestManager_Build(t *testing.T) {
 						tag:   model.Tags{"class": {}, "race": {}},
 						Class: "fighter", Race: "orc", Level: 9001,
 					},
-					wantCfgs: []model.Config{
+					expectedCfgs: []model.Config{
 						{Conf: "Class: fighter", Tags: model.Tags{"built": {}}},
 						{Conf: "Race: orc", Tags: model.Tags{"built": {}}},
 					},
@@ -185,7 +185,7 @@ func TestManager_Build(t *testing.T) {
 						tag:   model.Tags{"class": {}, "race": {}, "level": {}},
 						Class: "fighter", Race: "orc", Level: 9001,
 					},
-					wantCfgs: []model.Config{
+					expectedCfgs: []model.Config{
 						{Conf: "Class: fighter", Tags: model.Tags{"built": {}}},
 						{Conf: "Race: orc", Tags: model.Tags{"built": {}}},
 						{Conf: "Level: 9001", Tags: model.Tags{"built": {}}},
@@ -197,7 +197,7 @@ func TestManager_Build(t *testing.T) {
 						tag:   model.Tags{"class": {}, "race": {}, "level": {}, "full": {}},
 						Class: "fighter", Race: "orc", Level: 9001,
 					},
-					wantCfgs: []model.Config{
+					expectedCfgs: []model.Config{
 						{Conf: "Class: fighter", Tags: model.Tags{"built": {}}},
 						{Conf: "Race: orc", Tags: model.Tags{"built": {}}},
 						{Conf: "Level: 9001", Tags: model.Tags{"built": {}}},
@@ -226,7 +226,7 @@ func TestRule_Build(t *testing.T) {
 					},
 				},
 			},
-			values: []buildSimValue{
+			inputs: []buildSimInput{
 				{
 					desc: "not match rule selector",
 					target: mockTarget{
@@ -247,7 +247,7 @@ func TestRule_Build(t *testing.T) {
 						tag:   model.Tags{"build": {}, "human": {}},
 						Class: "fighter", Race: "human", Level: 9001,
 					},
-					wantCfgs: []model.Config{
+					expectedCfgs: []model.Config{
 						{Conf: "Class: fighter, Race: human, Level: 9001", Tags: model.Tags{"built": {}}},
 					},
 				},

@@ -142,7 +142,7 @@ func (d *Discovery) Discover(ctx context.Context, in chan<- []model.Group) {
 	}
 
 	wg.Add(1)
-	go func() { defer wg.Done(); d.runTagging(ctx, updates, in) }()
+	go func() { defer wg.Done(); d.run(ctx, updates, in) }()
 
 	close(d.started)
 
@@ -150,7 +150,7 @@ func (d *Discovery) Discover(ctx context.Context, in chan<- []model.Group) {
 	<-ctx.Done()
 }
 
-func (d *Discovery) runTagging(ctx context.Context, updates chan []model.Group, in chan<- []model.Group) {
+func (d *Discovery) run(ctx context.Context, updates chan []model.Group, in chan<- []model.Group) {
 	for {
 		select {
 		case <-ctx.Done():

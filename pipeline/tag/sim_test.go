@@ -14,9 +14,9 @@ type (
 	tagSim struct {
 		cfg     Config
 		invalid bool
-		values  []tagSimValue
+		inputs  []tagSimInput
 	}
-	tagSimValue struct {
+	tagSimInput struct {
 		desc         string
 		target       mockTarget
 		expectedTags model.Tags
@@ -34,15 +34,15 @@ func (sim tagSim) run(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, mgr)
 
-	if len(sim.values) == 0 {
+	if len(sim.inputs) == 0 {
 		return
 	}
 
-	for i, value := range sim.values {
-		name := fmt.Sprintf("test value:'%s'[%d], target:'%s', wantTags:'%s'",
-			value.desc, i+1, value.target, value.expectedTags)
+	for i, input := range sim.inputs {
+		name := fmt.Sprintf("input:'%s'[%d], target:'%s', wantTags:'%s'",
+			input.desc, i+1, input.target, input.expectedTags)
 
-		mgr.Tag(value.target)
-		assert.Equalf(t, value.expectedTags, value.target.Tags(), name)
+		mgr.Tag(input.target)
+		assert.Equalf(t, input.expectedTags, input.target.Tags(), name)
 	}
 }
