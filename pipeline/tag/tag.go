@@ -8,29 +8,29 @@ import (
 	"text/template"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/log"
+
+	"github.com/rs/zerolog"
 )
 
 type (
-	Config     []RuleConfig // mandatory, at least 1
-	RuleConfig struct {
-		Name     string        `yaml:"name"`
-		Selector string        `yaml:"selector"` // mandatory
-		Tags     string        `yaml:"tags"`     // mandatory
-		Match    []MatchConfig `yaml:"match"`    // mandatory, at least 1
-	}
-	MatchConfig struct {
-		Selector string `yaml:"selector"` // optional
-		Tags     string `yaml:"tags"`     // mandatory
-		Cond     string `yaml:"cond"`     // mandatory
-	}
-)
-
-type (
-	tagger interface {
-		Tag(model.Target)
-	}
 	Manager struct {
-		taggers []tagger
+		rules []*tagRule
+		buf   bytes.Buffer
+		log   zerolog.Logger
+	}
+	tagRule struct {
+		name  string
+		id    int
+		sr    model.Selector
+		tags  model.Tags
+		match []*ruleMatch
+	}
+	ruleMatch struct {
+		id   int
+		sr   model.Selector
+		tags model.Tags
+		cond *template.Template
 	}
 )
 
@@ -45,123 +45,81 @@ func New(cfg Config) (*Manager, error) {
 	return mgr, nil
 }
 
-func (m Manager) Tag(target model.Target) {
-	for _, t := range m.taggers {
-		t.Tag(target)
-	}
-}
-
-type (
-	Rule struct {
-		name  string
-		sr    model.Selector
-		tags  model.Tags
-		match []*RuleMatch
-		buf   bytes.Buffer
-	}
-	RuleMatch struct {
-		sr      model.Selector
-		tags    model.Tags
-		cond    *template.Template
-		rawCond string
-	}
-)
-
-func (r *Rule) Tag(target model.Target) {
-	if !r.sr.Matches(target.Tags()) {
-		return
-	}
-	for _, match := range r.match {
-		if !match.sr.Matches(target.Tags()) {
+func (m *Manager) Tag(target model.Target) {
+	for _, rule := range m.rules {
+		if !rule.sr.Matches(target.Tags()) {
 			continue
 		}
-		r.buf.Reset()
-		if err := match.cond.Execute(&r.buf, target); err != nil {
-			continue
-		}
-		if strings.TrimSpace(r.buf.String()) != "true" {
-			continue
-		}
-		target.Tags().Merge(r.tags)
-		target.Tags().Merge(match.tags)
-	}
-}
 
-func validateConfig(cfg Config) error {
-	if len(cfg) == 0 {
-		return errors.New("empty config, need least 1 rule")
-	}
-	for i, rule := range cfg {
-		if rule.Selector == "" {
-			return fmt.Errorf("'rule->selector' not set (rule %s[%d])", rule.Name, i+1)
-		}
-		if rule.Tags == "" {
-			return fmt.Errorf("'rule->tags' not set (rule %s[%d])", rule.Name, i+1)
-		}
-		if len(rule.Match) == 0 {
-			return fmt.Errorf("'rule->match' not set, need at least 1 rule match (rule %s[%d])", rule.Name, i+1)
-		}
-
-		for ii, match := range rule.Match {
-			if match.Tags == "" {
-				return fmt.Errorf("'rule->match->tags' not set (rule %s[%d]/match [%d])", rule.Name, i+1, ii+1)
+		for _, match := range rule.match {
+			if !match.sr.Matches(target.Tags()) {
+				continue
 			}
-			if match.Cond == "" {
-				return fmt.Errorf("'rule->match->cond' not set (rule %s[%d]/match [%d])", rule.Name, i+1, ii+1)
+
+			m.buf.Reset()
+			if err := match.cond.Execute(&m.buf, target); err != nil {
+				m.log.Warn().Err(err).Msgf("failed to execute rule match '%d/%d' on target '%s'",
+					rule.id, match.id, target.TUID())
+				continue
 			}
+			if strings.TrimSpace(m.buf.String()) != "true" {
+				continue
+			}
+
+			target.Tags().Merge(rule.tags)
+			target.Tags().Merge(match.tags)
 		}
 	}
-	return nil
 }
 
-func initManager(cfg Config) (*Manager, error) {
-	if len(cfg) == 0 {
+func initManager(conf Config) (*Manager, error) {
+	if len(conf) == 0 {
 		return nil, errors.New("empty config")
 	}
 
-	var mgr Manager
-	for _, ruleCfg := range cfg {
-		var rule Rule
-		sr, err := model.ParseSelector(ruleCfg.Selector)
-		if err != nil {
+	mgr := &Manager{
+		rules: nil,
+		log:   log.New("tag manager"),
+	}
+	for i, cfg := range conf {
+		rule := tagRule{id: i + 1}
+		if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 			return nil, err
+		} else {
+			rule.sr = sr
 		}
-		rule.sr = sr
 
-		tags, err := model.ParseTags(ruleCfg.Tags)
-		if err != nil {
+		if tags, err := model.ParseTags(cfg.Tags); err != nil {
 			return nil, err
+		} else {
+			rule.tags = tags
 		}
-		rule.tags = tags
 
-		for _, matchCfg := range ruleCfg.Match {
-			var match RuleMatch
-			sr, err := model.ParseSelector(matchCfg.Selector)
-			if err != nil {
+		for i, cfg := range cfg.Match {
+			match := ruleMatch{id: i + 1}
+			if sr, err := model.ParseSelector(cfg.Selector); err != nil {
 				return nil, err
-			}
-			match.sr = sr
-
-			tags, err := model.ParseTags(matchCfg.Tags)
-			if err != nil {
-				return nil, err
-			}
-			match.tags = tags
-
-			tmpl, err := parseTemplate(matchCfg.Cond)
-			if err != nil {
-				return nil, err
+			} else {
+				match.sr = sr
 			}
 
-			match.cond = tmpl
-			match.rawCond = matchCfg.Cond
+			if tags, err := model.ParseTags(cfg.Tags); err != nil {
+				return nil, err
+			} else {
+				match.tags = tags
+			}
+
+			if tmpl, err := parseTemplate(cfg.Cond); err != nil {
+				return nil, err
+			} else {
+				match.cond = tmpl
+			}
 
 			rule.match = append(rule.match, &match)
 		}
-
-		mgr.taggers = append(mgr.taggers, &rule)
+		mgr.rules = append(mgr.rules, &rule)
 	}
-	return &mgr, nil
+	return mgr, nil
 }
 
 func parseTemplate(line string) (*template.Template, error) {
