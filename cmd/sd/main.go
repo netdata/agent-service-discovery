@@ -108,7 +108,7 @@ func newConfigProvider(opts options) (manager.ConfigProvider, error) {
 		return nil, fmt.Errorf("config-map parameter bad syntax ('%s')", opts.ConfigMap)
 	}
 	provider, err := kubernetes.NewProvider(kubernetes.Config{
-		Namespace: "",
+		Namespace: os.Getenv("MY_POD_NAMESPACE"),
 		ConfigMap: parts[0],
 		Key:       parts[1],
 	})
