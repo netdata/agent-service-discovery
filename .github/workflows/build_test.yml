@@ -21,7 +21,7 @@ jobs:
 
       - name: Compile
         run: |
-          CGO_ENABLED=0 go build -o /tmp/sd github.com/netdata/agent-service-discovery/cmd/sd
+          CGO_ENABLED=0 go build -o /tmp/sd github.com/netdata/sd/cmd/sd
           /tmp/sd --help || true
 
       - name: Enforce formatted code
