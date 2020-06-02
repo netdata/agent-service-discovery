@@ -100,8 +100,12 @@ func initDiscovery(cfg Config) (*Discovery, error) {
 	if len(namespaces) == 0 {
 		namespaces = []string{apiv1.NamespaceAll}
 	}
-	if name := os.Getenv(envNodeName); name != "" && cfg.LocalMode && cfg.Role == RolePod {
-		cfg.Selector.Field = joinSelectors(cfg.Selector.Field, "spec.nodeName="+name)
+	if cfg.LocalMode && cfg.Role == RolePod {
+		if name := os.Getenv(envNodeName); name != "" {
+			cfg.Selector.Field = joinSelectors(cfg.Selector.Field, "spec.nodeName="+name)
+		} else {
+			return nil, fmt.Errorf("local_mode is enabled, but env '%s' not set", envNodeName)
+		}
 	}
 
 	d := &Discovery{
