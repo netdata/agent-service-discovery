@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -260,7 +259,7 @@ func (p Pod) valueFromSecret(vars map[string]string, ns string, env apiv1.EnvVar
 		return
 	}
 	if v, ok := secret.Data[sr.Key]; ok {
-		vars[env.Name] = decode64(v)
+		vars[env.Name] = string(v)
 	}
 }
 
@@ -296,7 +295,7 @@ func (p Pod) envFromSecret(vars map[string]string, ns string, src apiv1.EnvFromS
 		return
 	}
 	for k, v := range secret.Data {
-		vars[src.Prefix+k] = decode64(v)
+		vars[src.Prefix+k] = string(v)
 	}
 }
 
@@ -347,12 +346,4 @@ func isVar(name string) bool {
 	// environment variables in the container and any service environment
 	// variables.
 	return strings.IndexByte(name, '$') != -1
-}
-
-func decode64(bs []byte) string {
-	if len(bs) == 0 {
-		return ""
-	}
-	bs, _ = base64.StdEncoding.DecodeString(string(bs))
-	return string(bs)
 }

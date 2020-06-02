@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/base64"
 	"net"
 	"strconv"
 	"testing"
@@ -537,9 +536,9 @@ func prepareConfigMap(name string, data map[string]string) *apiv1.ConfigMap {
 }
 
 func prepareSecret(name string, data map[string]string) *apiv1.Secret {
-	encoded := make(map[string][]byte, len(data))
+	secretData := make(map[string][]byte, len(data))
 	for k, v := range data {
-		encoded[k] = encode64(v)
+		secretData[k] = []byte(v)
 	}
 	return &apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -547,7 +546,7 @@ func prepareSecret(name string, data map[string]string) *apiv1.Secret {
 			Namespace: "default",
 			UID:       types.UID("a03b8dc6-dc40-46dc-b571-5030e69d8161" + name),
 		},
-		Data: encoded,
+		Data: secretData,
 	}
 }
 
@@ -591,8 +590,4 @@ func preparePodGroupWithEnv(pod *apiv1.Pod, env map[string]string) *podGroup {
 		target.(*PodTarget).hash = mustCalcHash(target)
 	}
 	return group
-}
-
-func encode64(s string) []byte {
-	return []byte(base64.StdEncoding.EncodeToString([]byte(s)))
 }
