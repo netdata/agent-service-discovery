@@ -1,0 +1,111 @@
+on: [push, pull_request]
+name: Test and Deploy
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Go mod download
+        run: go mod download
+      - name: Compile
+        run: |
+          CGO_ENABLED=0 go build -o /tmp/sd github.com/netdata/sd/cmd/sd
+          /tmp/sd --help || true
+      - name: Enforce formatted code
+        run: "! go fmt ./... 2>&1 | read"
+      - name: Go vet
+        run: go vet ./...
+      - name: Go test
+        run: go test ./... -race -count=1
+      - name: Golangci-lint
+        uses: reviewdog/action-golangci-lint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-check
+  deploy:
+    needs: [test]
+    name: Build and deploy Docker images
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
+      github.repository == 'netdata/agent-service-discovery'
+    env:
+      DOCKER_CLI_EXPERIMENTAL: enabled  # for 'docker buildx'
+      DOCKER_USER: ${{secrets.DOCKER_USERNAME}}
+      DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+      DOCKER_REPO: ilyam/agent-sd
+      DOCKER_PLATFORMS: >
+        linux/386
+        linux/amd64
+        linux/arm/v7
+        linux/arm64/v8
+        linux/ppc64le
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Set up image tag
+        run: |
+          set -vx
+          # Export environment variable for later stages.
+          if echo "$GITHUB_REF" | grep -q '^refs/heads/'; then
+            # Pushes to (master) branch - deploy 'latest'.
+            echo "::set-env name=TAG::latest"
+          elif echo "$GITHUB_REF" | grep -q '^refs/tags/'; then
+            # Pushes tag - deploy tag name.
+            echo "::set-env name=TAG::${GITHUB_REF/refs\/tags\//}"
+          fi
+          echo "::set-env name=DOCKER_BASE::${DOCKER_REPO}"
+      - name: Install Docker buildx
+        run: |
+          set -vx
+          # Install up-to-date version of docker, with buildx support.
+          docker_apt_repo='https://download.docker.com/linux/ubuntu'
+          curl -fsSL "${docker_apt_repo}/gpg" | sudo apt-key add -
+          os="$(lsb_release -cs)"
+          sudo add-apt-repository "deb [arch=amd64] $docker_apt_repo $os stable"
+          sudo apt-get update
+          sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+
+          # Enable docker daemon experimental support (for 'pull --platform').
+          config='/etc/docker/daemon.json'
+          if [[ -e "$config" ]]; then
+            sudo sed -i -e 's/{/{ "experimental": true, /' "$config"
+          else
+            echo '{ "experimental": true }' | sudo tee "$config"
+          fi
+          sudo systemctl restart docker
+
+          # Install QEMU multi-architecture support for docker buildx.
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          # Instantiate docker buildx builder with multi-architecture support.
+          docker buildx create --name mybuilder
+          docker buildx use mybuilder
+
+          # Start up buildx and verify that all is OK.
+          docker buildx inspect --bootstrap
+      - name: Docker login
+        run: echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USER" --password-stdin
+      - name: Build multi-architecture Docker images with buildx
+        run: |
+          set -vx
+          function buildx() {
+            docker buildx build \
+              --platform ${DOCKER_PLATFORMS// /,} \
+              --push \
+              "$@" \
+              .
+          }
+          buildx -t "$DOCKER_BASE:$TAG"
+      - name: Docker logout
+        run: docker logout
