@@ -68,7 +68,7 @@ func (f *File) process(cfgs []model.Config) {
 }
 
 func (f *File) export() {
-	if !f.dump || len(f.cache) == 0 {
+	if !f.dump {
 		return
 	}
 	fi, err := os.Create(f.file)
@@ -140,7 +140,7 @@ func (s *Stdout) process(cfgs []model.Config) {
 }
 
 func (s *Stdout) export() {
-	if !s.dump || len(s.cache) == 0 {
+	if !s.dump {
 		return
 	}
 	s.dump = false
