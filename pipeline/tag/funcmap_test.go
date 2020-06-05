@@ -31,6 +31,33 @@ func Test_glob(t *testing.T) {
 	}
 }
 
+func Test_globAny(t *testing.T) {
+	tests := []struct {
+		pattern   string
+		value     string
+		wantFalse bool
+	}{
+		{pattern: "*", value: "value"},
+		{pattern: "*alu*", value: "value"},
+		{pattern: "?alu?", value: "value"},
+		{pattern: "v *", value: "value"},
+		{pattern: "v *alu*", value: "value"},
+		{pattern: "v ?alu?", value: "value"},
+		{pattern: "v val", value: "value", wantFalse: true},
+		{pattern: "", value: "value", wantFalse: true},
+	}
+
+	for i, test := range tests {
+		name := fmt.Sprintf("pattern: '%s', value: '%s' (%d)", test.pattern, test.value, i+1)
+
+		if test.wantFalse {
+			assert.Falsef(t, globAny(test.value, test.pattern), name)
+		} else {
+			assert.Truef(t, globAny(test.value, test.pattern), name)
+		}
+	}
+}
+
 func Test_regexp(t *testing.T) {
 	tests := []struct {
 		pattern   string
