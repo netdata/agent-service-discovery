@@ -43,7 +43,7 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled  # for 'docker buildx'
       DOCKER_USER: ${{secrets.DOCKER_USERNAME}}
       DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-      DOCKER_REPO: ilyam8/agent-sd
+      DOCKER_REPO: netdata/agent-sd
       DOCKER_PLATFORMS: >
         linux/amd64
         linux/arm/v7
