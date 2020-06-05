@@ -6,7 +6,7 @@ import (
 
 	"github.com/netdata/sd/pipeline/model"
 
-	"github.com/mitchellh/hashstructure"
+	"github.com/ilyam8/hashstructure"
 )
 
 func TestPipeline_Run(t *testing.T) {

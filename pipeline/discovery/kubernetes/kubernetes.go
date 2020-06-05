@@ -12,7 +12,7 @@ import (
 	"github.com/netdata/sd/pkg/k8s"
 	"github.com/netdata/sd/pkg/log"
 
-	"github.com/mitchellh/hashstructure"
+	"github.com/ilyam8/hashstructure"
 	"github.com/rs/zerolog"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

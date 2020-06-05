@@ -6,7 +6,7 @@ import (
 	"github.com/netdata/sd/pipeline/export"
 	"github.com/netdata/sd/pipeline/tag"
 
-	"github.com/mitchellh/hashstructure"
+	"github.com/ilyam8/hashstructure"
 )
 
 type Config struct {
