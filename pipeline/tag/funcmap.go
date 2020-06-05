@@ -9,15 +9,23 @@ import (
 )
 
 var condTmplFuncMap = map[string]interface{}{
-	"glob":   glob,
-	"regexp": regExp,
-	"eqAny":  eqAny,
-	"hasKey": hasKey,
+	"glob":    glob,
+	"globAny": globAny,
+	"regexp":  regExp,
+	"eqAny":   eqAny,
+	"hasKey":  hasKey,
 }
 
 func glob(value, pattern string) bool {
 	ok, _ := path.Match(pattern, value)
 	return ok
+}
+
+func globAny(value, pattern string) bool {
+	if idx := strings.IndexByte(pattern, ' '); idx != -1 {
+		return glob(value, pattern[:idx]) || globAny(value, pattern[idx+1:])
+	}
+	return glob(value, pattern)
 }
 
 func regExp(value, pattern string) bool {
