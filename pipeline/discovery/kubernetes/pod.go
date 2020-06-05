@@ -37,7 +37,7 @@ type (
 		ContName     string
 		Image        string
 		Env          map[string]string
-		PortNumber   string
+		Port         string
 		PortName     string
 		PortProtocol string
 	}
@@ -168,7 +168,7 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 				ContName:     container.Name,
 				Image:        container.Image,
 				Env:          env,
-				PortNumber:   portNum,
+				Port:         portNum,
 				PortName:     port.Name,
 				PortProtocol: string(port.Protocol),
 			}
