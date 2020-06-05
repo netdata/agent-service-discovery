@@ -126,6 +126,6 @@ func initManager(conf Config) (*Manager, error) {
 func parseTemplate(line string) (*template.Template, error) {
 	return template.New("root").
 		Option("missingkey=error").
-		Funcs(condTmplFuncMap).
+		Funcs(funcMap).
 		Parse(line)
 }
