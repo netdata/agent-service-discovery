@@ -4,43 +4,44 @@ import (
 	"path"
 	"reflect"
 	"regexp"
-	"strings"
 	"sync"
 )
 
-var condTmplFuncMap = map[string]interface{}{
-	"glob":    glob,
-	"globAny": globAny,
-	"regexp":  regExp,
-	"eqAny":   eqAny,
-	"hasKey":  hasKey,
+var funcMap = map[string]interface{}{
+	"glob":   glob,
+	"regexp": regExp,
+	"equal":  equal,
+	"hasKey": hasKey,
 }
 
-func glob(value, pattern string) bool {
-	ok, _ := path.Match(pattern, value)
-	return ok
-}
-
-func globAny(value, pattern string) bool {
-	if idx := strings.IndexByte(pattern, ' '); idx != -1 {
-		return glob(value, pattern[:idx]) || globAny(value, pattern[idx+1:])
+func glob(value, pattern string, rest ...string) bool {
+	switch len(rest) {
+	case 0:
+		return _glob(value, pattern)
+	default:
+		return _glob(value, pattern) || glob(value, rest[0], rest[1:]...)
 	}
-	return glob(value, pattern)
 }
 
-func regExp(value, pattern string) bool {
-	r, _ := regexpStore(pattern)
-	return r != nil && r.MatchString(value)
-}
-
-func eqAny(value, pattern string) bool {
-	if idx := strings.IndexByte(pattern, ' '); idx != -1 {
-		return value == pattern[:idx] || eqAny(value, pattern[idx+1:])
+func regExp(value, pattern string, rest ...string) bool {
+	switch len(rest) {
+	case 0:
+		return _regExp(value, pattern)
+	default:
+		return _regExp(value, pattern) || regExp(value, rest[0], rest[1:]...)
 	}
-	return value == pattern
 }
 
-func hasKey(value reflect.Value, key string) bool {
+func equal(value, pattern string, rest ...string) bool {
+	switch len(rest) {
+	case 0:
+		return value == pattern
+	default:
+		return value == pattern || equal(value, rest[0], rest[1:]...)
+	}
+}
+
+func hasKey(value reflect.Value, key string, rest ...string) bool {
 	value = reflect.Indirect(value)
 	if value.Kind() != reflect.Map {
 		return false
@@ -50,8 +51,23 @@ func hasKey(value reflect.Value, key string) bool {
 		if mr.Key().String() == key {
 			return true
 		}
+		for _, k := range rest {
+			if mr.Key().String() == k {
+				return true
+			}
+		}
 	}
 	return false
+}
+
+func _glob(value, pattern string) bool {
+	ok, _ := path.Match(pattern, value)
+	return ok
+}
+
+func _regExp(value, pattern string) bool {
+	r, _ := regexpStore(pattern)
+	return r != nil && r.MatchString(value)
 }
 
 var regexpStore = func() func(pattern string) (*regexp.Regexp, error) {
