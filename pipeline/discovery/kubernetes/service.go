@@ -27,11 +27,12 @@ type (
 		tuid       string
 		Address    string
 
-		Namespace    string
-		Name         string
-		Annotations  map[string]string
-		Labels       map[string]string
-		PortNumber   string
+		Namespace   string
+		Name        string
+		Annotations map[string]string
+		Labels      map[string]string
+
+		Port         string
 		PortName     string
 		PortProtocol string
 		ClusterIP    string
@@ -148,7 +149,7 @@ func (s Service) buildTargets(svc *apiv1.Service) (targets []model.Target) {
 			Name:         svc.Name,
 			Annotations:  svc.Annotations,
 			Labels:       svc.Labels,
-			PortNumber:   portNum,
+			Port:         portNum,
 			PortName:     port.Name,
 			PortProtocol: string(port.Protocol),
 			ClusterIP:    svc.Spec.ClusterIP,

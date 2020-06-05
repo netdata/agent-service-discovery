@@ -110,10 +110,10 @@ func TestServiceTarget_Hash(t *testing.T) {
 				return sim
 			},
 			expectedHash: []uint64{
-				17075044185525588532,
-				10642000196970370948,
-				2378329848690734052,
-				10359283398995996489,
+				17611803477081780974,
+				6019985892433421258,
+				4151907287549842238,
+				5757608926096186119,
 			},
 		},
 	}
@@ -402,7 +402,7 @@ func prepareSvcGroup(svc *apiv1.Service) *serviceGroup {
 			Name:         svc.Name,
 			Annotations:  svc.Annotations,
 			Labels:       svc.Labels,
-			PortNumber:   portNum,
+			Port:         portNum,
 			PortName:     port.Name,
 			PortProtocol: string(port.Protocol),
 			ClusterIP:    svc.Spec.ClusterIP,

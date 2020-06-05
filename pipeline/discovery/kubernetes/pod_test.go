@@ -111,10 +111,10 @@ func TestPodTarget_Hash(t *testing.T) {
 				return sim
 			},
 			expectedHash: []uint64{
-				9290392315829965134,
-				5860818937031469805,
-				4811247736538096710,
-				5217770314243214482,
+				10984584459239076244,
+				10480294460002508451,
+				6511065520956605596,
+				9821662463142050012,
 			},
 		},
 	}
@@ -571,7 +571,7 @@ func preparePodGroup(pod *apiv1.Pod) *podGroup {
 				ContName:     container.Name,
 				Image:        container.Image,
 				Env:          nil,
-				PortNumber:   portNum,
+				Port:         portNum,
 				PortName:     port.Name,
 				PortProtocol: string(port.Protocol),
 			}
