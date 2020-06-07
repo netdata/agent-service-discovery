@@ -78,26 +78,40 @@ func (p *Pipeline) run(ctx context.Context, disc chan []model.Group, export chan
 		case <-ctx.Done():
 			return
 		case groups := <-disc:
-			select {
-			case <-ctx.Done():
-			case export <- p.process(groups):
+			if configs := p.process(groups); len(configs) > 0 {
+				select {
+				case <-ctx.Done():
+				case export <- configs:
+				}
 			}
 		}
 	}
 }
 
 func (p *Pipeline) process(groups []model.Group) (configs []model.Config) {
+	p.log.Info().Msgf("received '%d' group(s)", len(groups))
+
 	for _, group := range groups {
+		p.log.Info().Msgf("processing group '%s' with %d target(s)", group.Source(), len(group.Targets()))
+
 		if len(group.Targets()) == 0 {
-			configs = append(configs, p.handleEmpty(group)...)
+			if remove := p.handleEmpty(group); len(remove) > 0 {
+				p.log.Info().Msgf("group '%s': stale config(s) %d", group.Source(), len(remove))
+
+				configs = append(configs, remove...)
+			}
 		} else {
-			configs = append(configs, p.handleNotEmpty(group)...)
+			if add, remove := p.handleNotEmpty(group); len(add) > 0 || len(remove) > 0 {
+				p.log.Info().Msgf("group '%s': new/stale config(s) %d/%d", group.Source(), len(add), len(remove))
+
+				configs = append(configs, append(add, remove...)...)
+			}
 		}
 	}
 	return configs
 }
 
-func (p *Pipeline) handleEmpty(group model.Group) (configs []model.Config) {
+func (p *Pipeline) handleEmpty(group model.Group) (remove []model.Config) {
 	grpCache, exist := p.cache[group.Source()]
 	if !exist {
 		return
@@ -106,13 +120,13 @@ func (p *Pipeline) handleEmpty(group model.Group) (configs []model.Config) {
 
 	for hash, cfgs := range grpCache {
 		delete(grpCache, hash)
-		configs = append(configs, cfgs...)
+		remove = append(remove, cfgs...)
 	}
 
-	return stale(configs)
+	return stale(remove)
 }
 
-func (p *Pipeline) handleNotEmpty(group model.Group) (configs []model.Config) {
+func (p *Pipeline) handleNotEmpty(group model.Group) (add, remove []model.Config) {
 	grpCache, exist := p.cache[group.Source()]
 	if !exist {
 		grpCache = make(map[uint64][]model.Config)
@@ -134,7 +148,7 @@ func (p *Pipeline) handleNotEmpty(group model.Group) (configs []model.Config) {
 		cfgs := p.Build(target)
 
 		grpCache[target.Hash()] = cfgs
-		configs = append(configs, cfgs...)
+		add = append(add, cfgs...)
 	}
 
 	if !exist {
@@ -144,10 +158,10 @@ func (p *Pipeline) handleNotEmpty(group model.Group) (configs []model.Config) {
 	for hash, cfgs := range grpCache {
 		if !seen[hash] {
 			delete(grpCache, hash)
-			configs = append(configs, stale(cfgs)...)
+			remove = append(remove, stale(cfgs)...)
 		}
 	}
-	return configs
+	return add, remove
 }
 
 func stale(configs []model.Config) []model.Config {
