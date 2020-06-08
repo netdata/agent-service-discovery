@@ -45,7 +45,7 @@ func ParseSelector(line string) (sr Selector, err error) {
 			sr, err = parseSingleSelectorWord(word)
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("selector '%s' contains selector '%s' with forbidden symbol", line, word)
 		}
 		srs = append(srs, sr)
 	}
@@ -137,7 +137,7 @@ func newOrSelector(lhs, rhs Selector, others ...Selector) Selector {
 func isSelectorWordValid(word string) bool {
 	// valid:
 	// *
-	// ^[a-zA-Z][a-zA-Z0-9_=]*$
+	// ^[a-zA-Z][a-zA-Z0-9=_.]*$
 	if len(word) == 0 {
 		return false
 	}

@@ -39,6 +39,9 @@ func ParseTags(line string) (Tags, error) {
 
 	tags := NewTags()
 	for _, tag := range words {
+		if !isTagWordValid(tag) {
+			return nil, fmt.Errorf("tags '%s' contains tag '%s' with forbidden symbol", line, tag)
+		}
 		tags[tag] = struct{}{}
 	}
 	return tags, nil
@@ -50,4 +53,26 @@ func MustParseTags(line string) Tags {
 		panic(fmt.Sprintf("tags '%s' parse error: %v", line, err))
 	}
 	return tags
+}
+
+func isTagWordValid(word string) bool {
+	// valid:
+	// ^[a-zA-Z][a-zA-Z0-9=_.]*$
+	if strings.HasPrefix(word, "-") {
+		word = word[1:]
+	}
+	if len(word) == 0 {
+		return false
+	}
+	for i, b := range word {
+		switch {
+		default:
+			return false
+		case b >= 'a' && b <= 'z':
+		case b >= 'A' && b <= 'Z':
+		case b >= '0' && b <= '9' && i > 0:
+		case (b == '=' || b == '_' || b == '.') && i > 0:
+		}
+	}
+	return true
 }
