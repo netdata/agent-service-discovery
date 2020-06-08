@@ -18,6 +18,10 @@ func Test_glob(t *testing.T) {
 			patterns: []string{"*"},
 			value:    "value",
 		},
+		"one param, matches with *": {
+			patterns: []string{"**/value"},
+			value:    "/one/two/three/value",
+		},
 		"one param, not matches": {
 			patterns:  []string{"Value"},
 			value:     "value",
@@ -38,9 +42,9 @@ func Test_glob(t *testing.T) {
 		name := fmt.Sprintf("name: %s, patterns: '%v', value: '%s'", name, test.patterns, test.value)
 
 		if test.wantFalse {
-			assert.Falsef(t, glob(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Falsef(t, globAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		} else {
-			assert.Truef(t, glob(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Truef(t, globAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		}
 	}
 }
@@ -75,9 +79,9 @@ func Test_regexp(t *testing.T) {
 		name := fmt.Sprintf("name: %s, patterns: '%v', value: '%s'", name, test.patterns, test.value)
 
 		if test.wantFalse {
-			assert.Falsef(t, regExp(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Falsef(t, regExpAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		} else {
-			assert.Truef(t, regExp(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Truef(t, regExpAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		}
 	}
 }
@@ -112,9 +116,9 @@ func Test_equal(t *testing.T) {
 		name := fmt.Sprintf("name: %s, patterns: '%v', value: '%s'", name, test.patterns, test.value)
 
 		if test.wantFalse {
-			assert.Falsef(t, equal(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Falsef(t, equalAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		} else {
-			assert.Truef(t, equal(test.value, test.patterns[0], test.patterns[1:]...), name)
+			assert.Truef(t, equalAny(test.value, test.patterns[0], test.patterns[1:]...), name)
 		}
 	}
 }
@@ -185,9 +189,9 @@ func Test_hasKey(t *testing.T) {
 		value := reflect.ValueOf(test.value)
 
 		if test.wantFalse {
-			assert.Falsef(t, hasKey(value, test.keys[0], test.keys[1:]...), name)
+			assert.Falsef(t, hasKeyAny(value, test.keys[0], test.keys[1:]...), name)
 		} else {
-			assert.Truef(t, hasKey(value, test.keys[0], test.keys[1:]...), name)
+			assert.Truef(t, hasKeyAny(value, test.keys[0], test.keys[1:]...), name)
 		}
 	}
 }

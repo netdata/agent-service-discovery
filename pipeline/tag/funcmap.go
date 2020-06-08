@@ -1,47 +1,48 @@
 package tag
 
 import (
-	"path"
 	"reflect"
 	"regexp"
 	"sync"
+
+	"github.com/gobwas/glob"
 )
 
 var funcMap = map[string]interface{}{
-	"glob":   glob,
-	"regexp": regExp,
-	"equal":  equal,
-	"hasKey": hasKey,
+	"glob":   globAny,
+	"regexp": regExpAny,
+	"equal":  equalAny,
+	"hasKey": hasKeyAny,
 }
 
-func glob(value, pattern string, rest ...string) bool {
+func globAny(value, pattern string, rest ...string) bool {
 	switch len(rest) {
 	case 0:
-		return _glob(value, pattern)
+		return globOnce(value, pattern)
 	default:
-		return _glob(value, pattern) || glob(value, rest[0], rest[1:]...)
+		return globOnce(value, pattern) || globAny(value, rest[0], rest[1:]...)
 	}
 }
 
-func regExp(value, pattern string, rest ...string) bool {
+func regExpAny(value, pattern string, rest ...string) bool {
 	switch len(rest) {
 	case 0:
-		return _regExp(value, pattern)
+		return regExpOnce(value, pattern)
 	default:
-		return _regExp(value, pattern) || regExp(value, rest[0], rest[1:]...)
+		return regExpOnce(value, pattern) || regExpAny(value, rest[0], rest[1:]...)
 	}
 }
 
-func equal(value, pattern string, rest ...string) bool {
+func equalAny(value, pattern string, rest ...string) bool {
 	switch len(rest) {
 	case 0:
 		return value == pattern
 	default:
-		return value == pattern || equal(value, rest[0], rest[1:]...)
+		return value == pattern || equalAny(value, rest[0], rest[1:]...)
 	}
 }
 
-func hasKey(value reflect.Value, key string, rest ...string) bool {
+func hasKeyAny(value reflect.Value, key string, rest ...string) bool {
 	value = reflect.Indirect(value)
 	if value.Kind() != reflect.Map {
 		return false
@@ -60,16 +61,40 @@ func hasKey(value reflect.Value, key string, rest ...string) bool {
 	return false
 }
 
-func _glob(value, pattern string) bool {
-	ok, _ := path.Match(pattern, value)
-	return ok
+func globOnce(value, pattern string) bool {
+	g, _ := globStore(pattern)
+	return g != nil && g.Match(value)
 }
 
-func _regExp(value, pattern string) bool {
+func regExpOnce(value, pattern string) bool {
 	r, _ := regexpStore(pattern)
 	return r != nil && r.MatchString(value)
 }
 
+// TODO: cleanup?
+var globStore = func() func(pattern string) (glob.Glob, error) {
+	var l sync.RWMutex
+	store := make(map[string]struct {
+		g   glob.Glob
+		err error
+	})
+
+	return func(pattern string) (glob.Glob, error) {
+		if pattern == "" {
+			return nil, nil
+		}
+		l.Lock()
+		defer l.Unlock()
+		r, ok := store[pattern]
+		if !ok {
+			r.g, r.err = glob.Compile(pattern, '/')
+			store[pattern] = r
+		}
+		return r.g, r.err
+	}
+}()
+
+// TODO: cleanup?
 var regexpStore = func() func(pattern string) (*regexp.Regexp, error) {
 	var l sync.RWMutex
 	store := make(map[string]struct {
