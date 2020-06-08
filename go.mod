@@ -6,6 +6,7 @@ replace k8s.io/client-go => k8s.io/client-go v0.18.3
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9
+	github.com/gobwas/glob v0.2.3
 	github.com/ilyam8/hashstructure v1.1.0
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/jessevdk/go-flags v1.4.0
