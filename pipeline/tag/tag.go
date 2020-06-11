@@ -30,7 +30,7 @@ type (
 		id   int
 		sr   model.Selector
 		tags model.Tags
-		cond *template.Template
+		expr *template.Template
 	}
 )
 
@@ -57,7 +57,7 @@ func (m *Manager) Tag(target model.Target) {
 			}
 
 			m.buf.Reset()
-			if err := match.cond.Execute(&m.buf, target); err != nil {
+			if err := match.expr.Execute(&m.buf, target); err != nil {
 				m.log.Warn().Err(err).Msgf("failed to execute rule match '%d/%d' on target '%s'",
 					rule.id, match.id, target.TUID())
 				continue
@@ -110,10 +110,10 @@ func initManager(conf Config) (*Manager, error) {
 				match.tags = tags
 			}
 
-			if tmpl, err := parseTemplate(cfg.Cond); err != nil {
+			if tmpl, err := parseTemplate(cfg.Expr); err != nil {
 				return nil, err
 			} else {
-				match.cond = tmpl
+				match.expr = tmpl
 			}
 
 			rule.match = append(rule.match, &match)
