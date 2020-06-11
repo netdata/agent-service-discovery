@@ -10,8 +10,7 @@ import (
 
 var funcMap = map[string]interface{}{
 	"glob":   globAny,
-	"regexp": regExpAny,
-	"equal":  equalAny,
+	"re":     regExpAny,
 	"hasKey": hasKeyAny,
 }
 
@@ -30,15 +29,6 @@ func regExpAny(value, pattern string, rest ...string) bool {
 		return regExpOnce(value, pattern)
 	default:
 		return regExpOnce(value, pattern) || regExpAny(value, rest[0], rest[1:]...)
-	}
-}
-
-func equalAny(value, pattern string, rest ...string) bool {
-	switch len(rest) {
-	case 0:
-		return value == pattern
-	default:
-		return value == pattern || equalAny(value, rest[0], rest[1:]...)
 	}
 }
 
