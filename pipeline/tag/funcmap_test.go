@@ -86,43 +86,6 @@ func Test_regexp(t *testing.T) {
 	}
 }
 
-func Test_equal(t *testing.T) {
-	tests := map[string]struct {
-		patterns  []string
-		value     string
-		wantFalse bool
-	}{
-		"one param, matches": {
-			patterns: []string{"value"},
-			value:    "value",
-		},
-		"one param, not matches": {
-			patterns:  []string{"Value"},
-			value:     "value",
-			wantFalse: true,
-		},
-		"several params, last one matches": {
-			patterns: []string{"not", "matches", "value"},
-			value:    "value",
-		},
-		"several params, no matches": {
-			patterns:  []string{"not", "matches", "Value"},
-			value:     "value",
-			wantFalse: true,
-		},
-	}
-
-	for name, test := range tests {
-		name := fmt.Sprintf("name: %s, patterns: '%v', value: '%s'", name, test.patterns, test.value)
-
-		if test.wantFalse {
-			assert.Falsef(t, equalAny(test.value, test.patterns[0], test.patterns[1:]...), name)
-		} else {
-			assert.Truef(t, equalAny(test.value, test.patterns[0], test.patterns[1:]...), name)
-		}
-	}
-}
-
 func Test_hasKey(t *testing.T) {
 	tests := map[string]struct {
 		keys      []string
