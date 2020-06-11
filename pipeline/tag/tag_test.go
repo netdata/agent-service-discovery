@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
+						{Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 					Selector: "",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
+						{Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
@@ -43,7 +43,7 @@ func TestNew(t *testing.T) {
 					Selector: "!",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
+						{Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
+						{Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
@@ -76,7 +76,7 @@ func TestNew(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Selector: "!", Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
+						{Selector: "!", Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
@@ -88,31 +88,31 @@ func TestNew(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "", Cond: `{{eq .Class "wizard"}}`},
+						{Tags: "", Expr: `{{eq .Class "wizard"}}`},
 					},
 				},
 			},
 		},
-		"config rule->match->cond not set": {
+		"config rule->match->expr not set": {
 			invalid: true,
 			cfg: Config{
 				{
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: ""},
+						{Tags: "wizard", Expr: ""},
 					},
 				},
 			},
 		},
-		"config rule->match->cond unknown func": {
+		"config rule->match->expr unknown func": {
 			invalid: true,
 			cfg: Config{
 				{
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{error .Class "wizard"}}`},
+						{Tags: "wizard", Expr: `{{error .Class "wizard"}}`},
 					},
 				},
 			},
@@ -132,25 +132,25 @@ func TestManager_Tag(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
-						{Tags: "knight", Cond: `{{eq .Class "knight"}}`},
-						{Tags: "cleric", Cond: `{{eq .Class "cleric"}}`},
+						{Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
+						{Tags: "knight", Expr: `{{eq .Class "knight"}}`},
+						{Tags: "cleric", Expr: `{{eq .Class "cleric"}}`},
 					},
 				},
 				{
 					Selector: "!unknown",
 					Tags:     "candidate",
 					Match: []MatchConfig{
-						{Tags: "human", Cond: `{{eq .Race "human"}}`},
-						{Tags: "elf", Cond: `{{eq .Race "elf"}}`},
-						{Tags: "dwarf", Cond: `{{eq .Race "dwarf"}}`},
+						{Tags: "human", Expr: `{{eq .Race "human"}}`},
+						{Tags: "elf", Expr: `{{eq .Race "elf"}}`},
+						{Tags: "dwarf", Expr: `{{eq .Race "dwarf"}}`},
 					},
 				},
 				{
 					Selector: "candidate",
 					Tags:     "-candidate",
 					Match: []MatchConfig{
-						{Tags: "teamup", Cond: `{{gt .Level 9000}}`},
+						{Tags: "teamup", Expr: `{{gt .Level 9000}}`},
 					},
 				},
 			},
@@ -202,8 +202,8 @@ func TestRule_Tag(t *testing.T) {
 					Selector: "unknown",
 					Tags:     "-unknown",
 					Match: []MatchConfig{
-						{Selector: "human", Tags: "wizard", Cond: `{{eq .Class "wizard"}}`},
-						{Tags: "missingkey", Cond: `{{eq .Name "yoda"}}`},
+						{Selector: "human", Tags: "wizard", Expr: `{{eq .Class "wizard"}}`},
+						{Tags: "missingkey", Expr: `{{eq .Name "yoda"}}`},
 					},
 				},
 			},
@@ -219,17 +219,17 @@ func TestRule_Tag(t *testing.T) {
 					expectedTags: model.Tags{"unknown": {}},
 				},
 				{
-					desc:         "not match rule match condition",
+					desc:         "not match rule match expression",
 					target:       mockTarget{tags: model.Tags{"unknown": {}, "human": {}}, Class: "fighter"},
 					expectedTags: model.Tags{"unknown": {}, "human": {}},
 				},
 				{
-					desc:         "match condition",
+					desc:         "match expression",
 					target:       mockTarget{tags: model.Tags{"unknown": {}, "human": {}}, Class: "wizard"},
 					expectedTags: model.Tags{"wizard": {}, "human": {}},
 				},
 				{
-					desc:         "match condition missingkey error",
+					desc:         "match expression missingkey error",
 					target:       mockTarget{tags: model.Tags{"unknown": {}, "missingkey": {}}, Class: "knight"},
 					expectedTags: model.Tags{"unknown": {}, "missingkey": {}},
 				},
@@ -243,14 +243,14 @@ func TestRule_Tag(t *testing.T) {
 }
 
 func TestRule_Tag_UseCustomFunction(t *testing.T) {
-	newSim := func(cond string) tagSim {
+	newSim := func(expr string) tagSim {
 		return tagSim{
 			cfg: Config{
 				{
 					Selector: "*",
 					Tags:     "-nothing",
 					Match: []MatchConfig{
-						{Tags: "wizard", Cond: cond},
+						{Tags: "wizard", Expr: expr},
 					},
 				},
 			},
@@ -266,7 +266,7 @@ func TestRule_Tag_UseCustomFunction(t *testing.T) {
 	tests := map[string]tagSim{
 		"glob":   newSim(`{{glob .Class "w*z*rd"}}`),
 		"regexp": newSim(`{{regexp .Class "^w[iI]z.*d$"}}`),
-		"eqAny":  newSim(`{{equal .Class "ranger" "knight" "cleric" "wizard"}}`),
+		"equal":  newSim(`{{equal .Class "ranger" "knight" "cleric" "wizard"}}`),
 		"hasKey": newSim(`{{hasKey .Tags "key"}}`),
 	}
 

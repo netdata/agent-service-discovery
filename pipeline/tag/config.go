@@ -16,7 +16,7 @@ type (
 	MatchConfig struct {
 		Selector string `yaml:"selector"` // optional
 		Tags     string `yaml:"tags"`     // mandatory
-		Cond     string `yaml:"cond"`     // mandatory
+		Expr     string `yaml:"expr"`     // mandatory
 	}
 )
 
@@ -39,8 +39,8 @@ func validateConfig(cfg Config) error {
 			if match.Tags == "" {
 				return fmt.Errorf("'rule->match->tags' not set (rule %s[%d]/match [%d])", rule.Name, i+1, j+1)
 			}
-			if match.Cond == "" {
-				return fmt.Errorf("'rule->match->cond' not set (rule %s[%d]/match [%d])", rule.Name, i+1, j+1)
+			if match.Expr == "" {
+				return fmt.Errorf("'rule->match->expr' not set (rule %s[%d]/match [%d])", rule.Name, i+1, j+1)
 			}
 		}
 	}
