@@ -93,20 +93,22 @@ For each declared port of a container, it generates single target.
 
 Available pod target fields:
 
--   `TUID` equal to `Namespace_Name_ContName_PortProtocol_Port`.
--   `Address` equal to `PodIP:Port`.
--   `Namespace` is _pod.metadata.namespace_.
--   `Name` is _pod.metadata.name_.
--   `Annotations` is a dict that contains all annotations from _pod.metadata.annotations_.
--   `Labels` is a dict that contains all labels from _pod.metadata.labels_.
--   `NodeName` is _pod.spec.nodeName_. 
--   `PodIP` is _pod.status.podIP_. 
--   `ContName` is _pod.spec.containers.name_. 
--   `Image` is _pod.spec.containers.image_.
--   `Env` is a dict that contains all variables from _pod.spec.containers.env_ and _pod.spec.containers.envFrom_.
--   `Port` is _pod.spec.containers.ports.containerPort_.
--   `PortName` is _pod.spec.containers.ports.name_.
--   `PortProtocol` is _pod.spec.containers.ports.protocol_.
+| Name           | Type              | Value                                                     |
+| :------------- | :---------------- | :-------------------------------------------------------- |
+| `TUID`         | string            | `Namespace_Name_ContName_PortProtocol_Port`               |
+| `Address`      | string            | `PodIP:Port`                                              |
+| `Namespace`    | string            | _pod.metadata.namespace_                                  |
+| `Name`         | string            | _pod.metadata.name_                                       |
+| `Annotations`  | map[string]string | _pod.metadata.annotations_                                |
+| `Labels`       | map[string]string | _pod.metadata.labels_                                     |
+| `NodeName`     | string            | _pod.spec.nodeName_                                       |
+| `PodIP`        | string            | _pod.status.podIP_                                        |
+| `ContName`     | string            | _pod.spec.containers.name_                                |
+| `Image`        | string            | _pod.spec.containers.image_                               |
+| `Env`          | map[string]string | _pod.spec.containers.env_ + _pod.spec.containers.envFrom_ |
+| `Port`         | string            | _pod.spec.containers.ports.containerPort_                 |
+| `PortName`     | string            | _pod.spec.containers.ports.name_                          |
+| `PortProtocol` | string            | _pod.spec.containers.ports.protocol_                      |
 
 ### Service Role
 
@@ -114,18 +116,20 @@ The service role discovers a target for each service port for each service.
 
 Available service target fields:
 
--   `TUID` equal to `Namespace_Name_PortProtocol_Port`.
--   `Address` equal to `Name.Namespace.svc:Port`.
--   `Namespace` is _svc.metadata.namespace_.
--   `Name` is _svc.metadata.name_.
--   `Annotations` is a dict that contains all annotations from _svc.metadata.annotations_.
--   `Labels` is a dict that contains all labels from _svc.metadata.labels_.
--   `Port` is _svc.spec.ports.port_.
--   `PortName` is _svc.spec.ports.name_.
--   `PortProtocol` is _svc.spec.ports.protocol_.
--   `ClusterIP` is _svc.spec.clusterIP_.
--   `ExternalName` is _svc.spec.externalName_.
--   `Type` is _svc.spec.ports.type_.
+| Name           | Type              | Value                                                     |
+| :------------- | :---------------- | :-------------------------------------------------------- |
+| `TUID`         | string            | `Namespace_Name_PortProtocol_Port`                        |
+| `Address`      | string            | `PodIP:Port`                                              |
+| `Namespace`    | string            | _svc.metadata.namespace_                                  |
+| `Name`         | string            | _svc.metadata.name_                                       |
+| `Annotations`  | map[string]string | _svc.metadata.annotations_                                |
+| `Labels`       | map[string]string | _svc.metadata.labels_                                     |
+| `Port`         | string            | _pod.spec.containers.ports.containerPort_                 |
+| `PortName`     | string            | _pod.spec.containers.ports.name_                          |
+| `PortProtocol` | string            | _pod.spec.containers.ports.protocol_                      |
+| `ClusterIP`    | string            | _svc.spec.clusterIP_                                      |
+| `ExternalName` | string            | _svc.spec.externalName_                                   |
+| `Type`         | string            | _svc.spec.ports.type_                                     |
 
 # Tag
 
