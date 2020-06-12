@@ -173,7 +173,7 @@ Available custom functions:
 
 All these functions accepts two or more arguments, returning in effect:
 
-> func(arg1, arg2) || func(arg1, arg2) ... 
+> func(arg1, arg2) || func(arg1, arg3) || func(arg1, arg4) ... 
 
 # Build
 
