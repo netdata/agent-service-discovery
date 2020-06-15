@@ -35,7 +35,7 @@ A word must match the regex `^[a-zA-Z][a-zA-Z0-9=_.]*$`.
 
 Tags special cases:
 
- - `-wrod`: the word will be removed on tags merging.
+ - `-word`: the word will be removed on tags merging.
 
 Selectors special cases:
 
