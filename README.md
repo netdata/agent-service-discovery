@@ -1,11 +1,39 @@
-# Service-discovery
+# Service discovery
 
-Service-discovery extracts all the potentially useful information from different sources,
+Service discovery extracts all the potentially useful information from different sources,
 converts it to the configurations and exports them to the different destinations.
+
+## Supported services
+
+Service discovery currently supports the following services via their associated collector:
+
+-   [ActiveMQ](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/activemq)
+-   [Apache](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/apache)
+-   [Bind](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/bind)
+-   [CockroachDB](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/cockroachdb)
+-   [Consul](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/consul)
+-   [CoreDNS](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/coredns)
+-   [Fluentd](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/fluentd)
+-   [FreeRADIUS](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/freeradius)
+-   [HDFS](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/hdfs)
+-   [Lighttpd](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/lighttpd)
+-   [Lighttpd2](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/lighttpd2)
+-   [Logstash](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/logstash)
+-   [MySQL](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/mysql)
+-   [NGINX](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/nginx)
+-   [OpenVPN](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/openvpn)
+-   [PHP-FPM](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/phpfpm)
+-   [RabbitMQ](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/rabbitmq)
+-   [Solr](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/solr)
+-   [Tengine](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/tengine)
+-   [Unbound](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/unbound)
+-   [VerneMQ](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/vernemq)
+-   [ZooKeeper](https://learn.netdata.cloud/docs/agent/collectors/go.d.plugin/modules/zookeeper)
+
 
 # Pipeline
 
-Service-discovery pipeline has 4 jobs:
+The service discovery pipeline has four jobs:
 
 -   [discovery](#Discovery): dynamically discovers targets.
 -   [tag](#Tag): tags discovered targets.
