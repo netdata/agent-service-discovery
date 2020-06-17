@@ -1,11 +1,11 @@
-# Service-discovery
+# Service discovery
 
-Service-discovery extracts all the potentially useful information from different sources,
+Service discovery extracts all the potentially useful information from different sources,
 converts it to the configurations and exports them to the different destinations.
 
 # Pipeline
 
-Service-discovery pipeline has 4 jobs:
+The service discovery pipeline has four jobs:
 
 -   [discovery](#Discovery): dynamically discovers targets.
 -   [tag](#Tag): tags discovered targets.
