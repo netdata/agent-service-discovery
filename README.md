@@ -119,7 +119,7 @@ Available service target fields:
 | Name           | Type              | Value                                                     |
 | :------------- | :---------------- | :-------------------------------------------------------- |
 | `TUID`         | string            | `Namespace_Name_PortProtocol_Port`                        |
-| `Address`      | string            | `PodIP:Port`                                              |
+| `Address`      | string            | `Name.Namespace.svc:Port`                                              |
 | `Namespace`    | string            | _svc.metadata.namespace_                                  |
 | `Name`         | string            | _svc.metadata.name_                                       |
 | `Annotations`  | map[string]string | _svc.metadata.annotations_                                |
