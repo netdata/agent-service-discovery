@@ -1,7 +1,7 @@
----
+<!--
 title: "Service discovery"
 custom_edit_url: https://github.com/netdata/agent-service-discovery/edit/master/README.md
----
+-->
 
 # Service discovery
 
