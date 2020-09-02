@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/netdata/sd/pipeline/model"
+	"github.com/netdata/sd/pkg/funcmap"
 	"github.com/netdata/sd/pkg/log"
 
 	"github.com/rs/zerolog"
@@ -126,6 +127,6 @@ func initManager(conf Config) (*Manager, error) {
 func parseTemplate(line string) (*template.Template, error) {
 	return template.New("root").
 		Option("missingkey=error").
-		Funcs(funcMap).
+		Funcs(funcmap.FuncMap).
 		Parse(line)
 }

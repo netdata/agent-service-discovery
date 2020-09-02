@@ -29,8 +29,8 @@ type (
 
 		Namespace   string
 		Name        string
-		Annotations map[string]string
-		Labels      map[string]string
+		Annotations map[string]interface{}
+		Labels      map[string]interface{}
 
 		Port         string
 		PortName     string
@@ -147,8 +147,8 @@ func (s Service) buildTargets(svc *apiv1.Service) (targets []model.Target) {
 			Address:      net.JoinHostPort(svc.Name+"."+svc.Namespace+".svc", portNum),
 			Namespace:    svc.Namespace,
 			Name:         svc.Name,
-			Annotations:  svc.Annotations,
-			Labels:       svc.Labels,
+			Annotations:  toMapInterface(svc.Annotations),
+			Labels:       toMapInterface(svc.Labels),
 			Port:         portNum,
 			PortName:     port.Name,
 			PortProtocol: string(port.Protocol),

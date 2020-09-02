@@ -264,9 +264,8 @@ func TestRule_Tag_UseCustomFunction(t *testing.T) {
 	}
 
 	tests := map[string]tagSim{
-		"glob":   newSim(`{{glob .Class "w*z*rd"}}`),
-		"re":     newSim(`{{re .Class "^w[iI]z.*d$"}}`),
-		"hasKey": newSim(`{{hasKey .Tags "key"}}`),
+		"glob": newSim(`{{glob .Class "w*z*rd"}}`),
+		"re":   newSim(`{{re .Class "^w[iI]z.*d$"}}`),
 	}
 
 	for name, sim := range tests {

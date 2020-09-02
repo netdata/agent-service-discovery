@@ -29,14 +29,14 @@ type (
 
 		Namespace   string
 		Name        string
-		Annotations map[string]string
-		Labels      map[string]string
+		Annotations map[string]interface{}
+		Labels      map[string]interface{}
 		NodeName    string
 		PodIP       string
 
 		ContName     string
 		Image        string
-		Env          map[string]string
+		Env          map[string]interface{}
 		Port         string
 		PortName     string
 		PortProtocol string
@@ -161,13 +161,13 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
 				Namespace:    pod.Namespace,
 				Name:         pod.Name,
-				Annotations:  pod.Annotations,
-				Labels:       pod.Labels,
+				Annotations:  toMapInterface(pod.Annotations),
+				Labels:       toMapInterface(pod.Labels),
 				NodeName:     pod.Spec.NodeName,
 				PodIP:        pod.Status.PodIP,
 				ContName:     container.Name,
 				Image:        container.Image,
-				Env:          env,
+				Env:          toMapInterface(env),
 				Port:         portNum,
 				PortName:     port.Name,
 				PortProtocol: string(port.Protocol),
@@ -346,4 +346,15 @@ func isVar(name string) bool {
 	// environment variables in the container and any service environment
 	// variables.
 	return strings.IndexByte(name, '$') != -1
+}
+
+func toMapInterface(src map[string]string) map[string]interface{} {
+	if src == nil {
+		return nil
+	}
+	m := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		m[k] = v
+	}
+	return m
 }
