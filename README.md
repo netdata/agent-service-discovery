@@ -171,7 +171,7 @@ match:
 
 Expression syntax is [go-template](https://golang.org/pkg/text/template/).
 
-### Available functions:
+### Available functions
 
 -   go-template [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
 -   [sprig functions](http://masterminds.github.io/sprig/).
@@ -219,7 +219,7 @@ apply:
 
 Template syntax is [go-template](https://golang.org/pkg/text/template/).
 
-### Available functions:
+### Available functions
 
 -   go-template [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
 -   [sprig functions](http://masterminds.github.io/sprig/).
