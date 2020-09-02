@@ -1,17 +1,25 @@
-package tag
+package funcmap
 
 import (
-	"reflect"
 	"regexp"
 	"sync"
+	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/gobwas/glob"
 )
 
+var FuncMap = func() template.FuncMap {
+	fm := sprig.HermeticTxtFuncMap()
+	for name, fn := range funcMap {
+		fm[name] = fn
+	}
+	return fm
+}()
+
 var funcMap = map[string]interface{}{
-	"glob":   globAny,
-	"re":     regExpAny,
-	"hasKey": hasKeyAny,
+	"glob": globAny,
+	"re":   regexpAny,
 }
 
 func globAny(value, pattern string, rest ...string) bool {
@@ -23,32 +31,13 @@ func globAny(value, pattern string, rest ...string) bool {
 	}
 }
 
-func regExpAny(value, pattern string, rest ...string) bool {
+func regexpAny(value, pattern string, rest ...string) bool {
 	switch len(rest) {
 	case 0:
-		return regExpOnce(value, pattern)
+		return regexpOnce(value, pattern)
 	default:
-		return regExpOnce(value, pattern) || regExpAny(value, rest[0], rest[1:]...)
+		return regexpOnce(value, pattern) || regexpAny(value, rest[0], rest[1:]...)
 	}
-}
-
-func hasKeyAny(value reflect.Value, key string, rest ...string) bool {
-	value = reflect.Indirect(value)
-	if value.Kind() != reflect.Map {
-		return false
-	}
-	mr := value.MapRange()
-	for mr.Next() {
-		if mr.Key().String() == key {
-			return true
-		}
-		for _, k := range rest {
-			if mr.Key().String() == k {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func globOnce(value, pattern string) bool {
@@ -56,7 +45,7 @@ func globOnce(value, pattern string) bool {
 	return g != nil && g.Match(value)
 }
 
-func regExpOnce(value, pattern string) bool {
+func regexpOnce(value, pattern string) bool {
 	r, _ := regexpStore(pattern)
 	return r != nil && r.MatchString(value)
 }
@@ -75,12 +64,12 @@ var globStore = func() func(pattern string) (glob.Glob, error) {
 		}
 		l.Lock()
 		defer l.Unlock()
-		r, ok := store[pattern]
+		entry, ok := store[pattern]
 		if !ok {
-			r.g, r.err = glob.Compile(pattern, '/')
-			store[pattern] = r
+			entry.g, entry.err = glob.Compile(pattern, '/')
+			store[pattern] = entry
 		}
-		return r.g, r.err
+		return entry.g, entry.err
 	}
 }()
 
@@ -98,11 +87,11 @@ var regexpStore = func() func(pattern string) (*regexp.Regexp, error) {
 		}
 		l.Lock()
 		defer l.Unlock()
-		r, ok := store[pattern]
+		entry, ok := store[pattern]
 		if !ok {
-			r.r, r.err = regexp.Compile(pattern)
-			store[pattern] = r
+			entry.r, entry.err = regexp.Compile(pattern)
+			store[pattern] = entry
 		}
-		return r.r, r.err
+		return entry.r, entry.err
 	}
 }()

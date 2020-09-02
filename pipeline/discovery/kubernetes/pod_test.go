@@ -564,8 +564,8 @@ func preparePodGroup(pod *apiv1.Pod) *podGroup {
 				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
 				Namespace:    pod.Namespace,
 				Name:         pod.Name,
-				Annotations:  pod.Annotations,
-				Labels:       pod.Labels,
+				Annotations:  toMapInterface(pod.Annotations),
+				Labels:       toMapInterface(pod.Labels),
 				NodeName:     pod.Spec.NodeName,
 				PodIP:        pod.Status.PodIP,
 				ContName:     container.Name,
@@ -586,7 +586,7 @@ func preparePodGroup(pod *apiv1.Pod) *podGroup {
 func preparePodGroupWithEnv(pod *apiv1.Pod, env map[string]string) *podGroup {
 	group := preparePodGroup(pod)
 	for _, target := range group.Targets() {
-		target.(*PodTarget).Env = env
+		target.(*PodTarget).Env = toMapInterface(env)
 		target.(*PodTarget).hash = mustCalcHash(target)
 	}
 	return group
