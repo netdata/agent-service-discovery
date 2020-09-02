@@ -173,7 +173,7 @@ Expression syntax is [go-template](https://golang.org/pkg/text/template/).
 
 ### Available functions:
 
--   golang [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
+-   go-template [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
 -   [sprig functions](http://masterminds.github.io/sprig/).
 -   custom functions.
 
@@ -221,7 +221,7 @@ Template syntax is [go-template](https://golang.org/pkg/text/template/).
 
 ### Available functions:
 
--   golang [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
+-   go-template [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions).
 -   [sprig functions](http://masterminds.github.io/sprig/).
 -   custom functions.
 
