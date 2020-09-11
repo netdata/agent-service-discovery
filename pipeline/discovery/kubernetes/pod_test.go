@@ -560,7 +560,7 @@ func preparePodGroup(pod *apiv1.Pod) *podGroup {
 		for _, port := range container.Ports {
 			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
 			target := &PodTarget{
-				tuid:         podTUID(pod, container, port),
+				tuid:         podTUIDWithPort(pod, container, port),
 				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
 				Namespace:    pod.Namespace,
 				Name:         pod.Name,
