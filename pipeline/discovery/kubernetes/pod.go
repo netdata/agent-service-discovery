@@ -154,10 +154,33 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 	for _, container := range pod.Spec.Containers {
 		env := p.collectEnv(pod.Namespace, container)
 
+		if len(container.Ports) == 0 {
+			target := &PodTarget{
+				tuid:        podTUID(pod, container),
+				Address:     pod.Status.PodIP,
+				Namespace:   pod.Namespace,
+				Name:        pod.Name,
+				Annotations: toMapInterface(pod.Annotations),
+				Labels:      toMapInterface(pod.Labels),
+				NodeName:    pod.Spec.NodeName,
+				PodIP:       pod.Status.PodIP,
+				ContName:    container.Name,
+				Image:       container.Image,
+				Env:         toMapInterface(env),
+			}
+			hash, err := calcHash(target)
+			if err != nil {
+				continue
+			}
+			target.hash = hash
+
+			return []model.Target{target}
+		}
+
 		for _, port := range container.Ports {
 			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
 			target := &PodTarget{
-				tuid:         podTUID(pod, container, port),
+				tuid:         podTUIDWithPort(pod, container, port),
 				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
 				Namespace:    pod.Namespace,
 				Name:         pod.Name,
@@ -299,7 +322,15 @@ func (p Pod) envFromSecret(vars map[string]string, ns string, src apiv1.EnvFromS
 	}
 }
 
-func podTUID(pod *apiv1.Pod, container apiv1.Container, port apiv1.ContainerPort) string {
+func podTUID(pod *apiv1.Pod, container apiv1.Container) string {
+	return fmt.Sprintf("%s_%s_%s",
+		pod.Namespace,
+		pod.Name,
+		container.Name,
+	)
+}
+
+func podTUIDWithPort(pod *apiv1.Pod, container apiv1.Container, port apiv1.ContainerPort) string {
 	return fmt.Sprintf("%s_%s_%s_%s_%s",
 		pod.Namespace,
 		pod.Name,
