@@ -20,8 +20,8 @@ import (
 )
 
 type options struct {
-	ConfigFile string `long:"config-file" description:"Configuration file path"`
-	ConfigMap  string `long:"config-map" description:"Configuration ConfigMap (name:key)"`
+	ConfigFile string `long:"config-file" env:"NETDATA_SD_CONFIG_FILE" description:"Configuration file path"`
+	ConfigMap  string `long:"config-map" env:"NETDATA_SD_CONFIG_MAP" description:"Configuration ConfigMap (name:key)"`
 	Debug      bool   `short:"d" long:"debug" description:"Debug mode"`
 }
 
@@ -29,7 +29,6 @@ var logger = log.New("main")
 
 func main() {
 	opts := parseCLI()
-	applyFromEnv(&opts)
 
 	if err := validateOptions(opts); err != nil {
 		logger.Fatal().Err(err).Msg("failed to validate cli options")
@@ -80,15 +79,6 @@ func parseCLI() options {
 		}
 	}
 	return opts
-}
-
-func applyFromEnv(opts *options) {
-	if v, ok := os.LookupEnv("NETDATA_SD_CONFIG_FILE"); ok && opts.ConfigFile == "" {
-		opts.ConfigFile = v
-	}
-	if v, ok := os.LookupEnv("NETDATA_SD_CONFIG_MAP"); ok && opts.ConfigMap == "" {
-		opts.ConfigMap = v
-	}
 }
 
 func validateOptions(opts options) error {
