@@ -40,6 +40,7 @@ jobs:
       (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
       github.repository == 'netdata/agent-service-discovery'
     env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       DOCKER_CLI_EXPERIMENTAL: enabled  # for 'docker buildx'
       DOCKER_USER: ${{secrets.DOCKER_USERNAME}}
       DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
