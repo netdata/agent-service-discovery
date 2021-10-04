@@ -24,7 +24,7 @@ func TestManager_Export(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		wg.Done()
+		defer wg.Done()
 		mgr.Export(ctx, out)
 	}()
 
