@@ -12,9 +12,9 @@ require (
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.25.1
-	k8s.io/apimachinery v0.25.1
-	k8s.io/client-go v0.25.1
+	k8s.io/api v0.25.2
+	k8s.io/apimachinery v0.25.2
+	k8s.io/client-go v0.25.2
 )
 
 require (
