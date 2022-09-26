@@ -58,9 +58,7 @@ func MustParseTags(line string) Tags {
 func isTagWordValid(word string) bool {
 	// valid:
 	// ^[a-zA-Z][a-zA-Z0-9=_.]*$
-	if strings.HasPrefix(word, "-") {
-		word = word[1:]
-	}
+	word = strings.TrimPrefix(word, "-")
 	if len(word) == 0 {
 		return false
 	}
