@@ -4,7 +4,7 @@ custom_edit_url: "https://github.com/netdata/agent-service-discovery/edit/master
 sidebar_label: "agent-service-discovery"
 learn_status: "Published"
 learn_topic_type: "References"
-learn_rel_path: "Container orchestrators/Kubernetes"
+learn_rel_path: "Collectors References/Container orchestrators/Kubernetes"
 -->
 
 # Service discovery
