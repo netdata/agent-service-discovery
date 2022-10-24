@@ -10,7 +10,7 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/mattn/go-isatty v0.0.16
 	github.com/rs/zerolog v1.28.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3
