@@ -40,7 +40,6 @@ jobs:
       (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
       github.repository == 'netdata/agent-service-discovery'
     env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       DOCKER_CLI_EXPERIMENTAL: enabled  # for 'docker buildx'
       DOCKER_USER: ${{secrets.DOCKER_USERNAME}}
       DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
@@ -62,12 +61,12 @@ jobs:
           # Export environment variable for later stages.
           if echo "$GITHUB_REF" | grep -q '^refs/heads/'; then
             # Pushes to (master) branch - deploy 'latest'.
-            echo "::set-env name=TAG::latest"
+            echo "TAG=latest" >> $GITHUB_ENV
           elif echo "$GITHUB_REF" | grep -q '^refs/tags/'; then
             # Pushes tag - deploy tag name.
-            echo "::set-env name=TAG::${GITHUB_REF/refs\/tags\//}"
+            echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
           fi
-          echo "::set-env name=DOCKER_BASE::${DOCKER_REPO}"
+          echo "DOCKER_BASE=${DOCKER_REPO}" >> $GITHUB_ENV
       - name: Install Docker buildx
         run: |
           set -vx
