@@ -6,7 +6,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o agent_sd github.com/netdata/sd/cmd/sd
 
-FROM alpine:3.17.0
+FROM alpine:3.17.1
 
 COPY --from=builder /app/agent_sd /app/
 
