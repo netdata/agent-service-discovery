@@ -174,34 +174,34 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 			}
 			target.hash = hash
 
-			return []model.Target{target}
-		}
-
-		for _, port := range container.Ports {
-			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
-			target := &PodTarget{
-				tuid:         podTUIDWithPort(pod, container, port),
-				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
-				Namespace:    pod.Namespace,
-				Name:         pod.Name,
-				Annotations:  toMapInterface(pod.Annotations),
-				Labels:       toMapInterface(pod.Labels),
-				NodeName:     pod.Spec.NodeName,
-				PodIP:        pod.Status.PodIP,
-				ContName:     container.Name,
-				Image:        container.Image,
-				Env:          toMapInterface(env),
-				Port:         portNum,
-				PortName:     port.Name,
-				PortProtocol: string(port.Protocol),
-			}
-			hash, err := calcHash(target)
-			if err != nil {
-				continue
-			}
-			target.hash = hash
-
 			targets = append(targets, target)
+		} else {
+			for _, port := range container.Ports {
+				portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
+				target := &PodTarget{
+					tuid:         podTUIDWithPort(pod, container, port),
+					Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
+					Namespace:    pod.Namespace,
+					Name:         pod.Name,
+					Annotations:  toMapInterface(pod.Annotations),
+					Labels:       toMapInterface(pod.Labels),
+					NodeName:     pod.Spec.NodeName,
+					PodIP:        pod.Status.PodIP,
+					ContName:     container.Name,
+					Image:        container.Image,
+					Env:          toMapInterface(env),
+					Port:         portNum,
+					PortName:     port.Name,
+					PortProtocol: string(port.Protocol),
+				}
+				hash, err := calcHash(target)
+				if err != nil {
+					continue
+				}
+				target.hash = hash
+
+				targets = append(targets, target)
+			}
 		}
 	}
 	return targets
