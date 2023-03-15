@@ -42,7 +42,9 @@ func (sim runSim) run(t *testing.T) {
 	cancel()
 	wg.Wait()
 
+	lock.Lock()
 	assert.Equalf(t, sim.expectedAfterStop, fact.created, "after stop")
+	lock.Unlock()
 }
 
 type (
