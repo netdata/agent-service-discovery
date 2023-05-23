@@ -8,7 +8,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/ilyam8/hashstructure v1.1.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/mattn/go-isatty v0.0.18
+	github.com/mattn/go-isatty v0.0.19
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.3
 	gopkg.in/yaml.v2 v2.4.0
