@@ -74,35 +74,10 @@ jobs:
             echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
           fi
           echo "DOCKER_BASE=${DOCKER_REPO}" >> $GITHUB_ENV
-      - name: Install Docker buildx
-        run: |
-          set -vx
-          # Install up-to-date version of docker, with buildx support.
-          docker_apt_repo='https://download.docker.com/linux/ubuntu'
-          curl -fsSL "${docker_apt_repo}/gpg" | sudo apt-key add -
-          os="$(lsb_release -cs)"
-          sudo add-apt-repository "deb [arch=amd64] $docker_apt_repo $os stable"
-          sudo apt-get update
-          sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-
-          # Enable docker daemon experimental support (for 'pull --platform').
-          config='/etc/docker/daemon.json'
-          if [[ -e "$config" ]]; then
-            sudo sed -i -e 's/{/{ "experimental": true, /' "$config"
-          else
-            echo '{ "experimental": true }' | sudo tee "$config"
-          fi
-          sudo systemctl restart docker
-
-          # Install QEMU multi-architecture support for docker buildx.
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-          # Instantiate docker buildx builder with multi-architecture support.
-          docker buildx create --name mybuilder
-          docker buildx use mybuilder
-
-          # Start up buildx and verify that all is OK.
-          docker buildx inspect --bootstrap
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - name: Docker login
         run: echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USER" --password-stdin
       - name: Build multi-architecture Docker images with buildx
