@@ -54,7 +54,7 @@ type Service struct {
 }
 
 func NewService(inf cache.SharedInformer) *Service {
-	queue := workqueue.NewNamed("service")
+	queue := workqueue.NewWithConfig(workqueue.QueueConfig{Name: "service"})
 	inf.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { enqueue(queue, obj) },
 		UpdateFunc: func(_, obj interface{}) { enqueue(queue, obj) },

@@ -111,10 +111,10 @@ func TestPodTarget_Hash(t *testing.T) {
 				return sim
 			},
 			expectedHash: []uint64{
-				10984584459239076244,
-				10480294460002508451,
-				6511065520956605596,
-				9821662463142050012,
+				12703169414253998055,
+				13351713096133918928,
+				8241692333761256175,
+				11562466355572729519,
 			},
 		},
 	}
@@ -468,6 +468,8 @@ func mangleContainers(containers []apiv1.Container, m func(container *apiv1.Cont
 	}
 }
 
+var controllerTrue = true
+
 func newHTTPDPod() *apiv1.Pod {
 	return &apiv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -476,6 +478,9 @@ func newHTTPDPod() *apiv1.Pod {
 			UID:         "1cebb6eb-0c1e-495b-8131-8fa3e6668dc8",
 			Annotations: map[string]string{"phase": "prod"},
 			Labels:      map[string]string{"app": "httpd", "tier": "frontend"},
+			OwnerReferences: []metav1.OwnerReference{
+				{Name: "netdata-test", Kind: "DaemonSet", Controller: &controllerTrue},
+			},
 		},
 		Spec: apiv1.PodSpec{
 			NodeName: "m01",
@@ -504,6 +509,9 @@ func newNGINXPod() *apiv1.Pod {
 			UID:         "09e883f2-d740-4c5f-970d-02cf02876522",
 			Annotations: map[string]string{"phase": "prod"},
 			Labels:      map[string]string{"app": "nginx", "tier": "frontend"},
+			OwnerReferences: []metav1.OwnerReference{
+				{Name: "netdata-test", Kind: "DaemonSet", Controller: &controllerTrue},
+			},
 		},
 		Spec: apiv1.PodSpec{
 			NodeName: "m01",
@@ -560,20 +568,22 @@ func preparePodGroup(pod *apiv1.Pod) *podGroup {
 		for _, port := range container.Ports {
 			portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
 			target := &PodTarget{
-				tuid:         podTUIDWithPort(pod, container, port),
-				Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
-				Namespace:    pod.Namespace,
-				Name:         pod.Name,
-				Annotations:  toMapInterface(pod.Annotations),
-				Labels:       toMapInterface(pod.Labels),
-				NodeName:     pod.Spec.NodeName,
-				PodIP:        pod.Status.PodIP,
-				ContName:     container.Name,
-				Image:        container.Image,
-				Env:          nil,
-				Port:         portNum,
-				PortName:     port.Name,
-				PortProtocol: string(port.Protocol),
+				tuid:           podTUIDWithPort(pod, container, port),
+				Address:        net.JoinHostPort(pod.Status.PodIP, portNum),
+				Namespace:      pod.Namespace,
+				Name:           pod.Name,
+				Annotations:    toMapInterface(pod.Annotations),
+				Labels:         toMapInterface(pod.Labels),
+				NodeName:       pod.Spec.NodeName,
+				PodIP:          pod.Status.PodIP,
+				ControllerName: "netdata-test",
+				ControllerKind: "DaemonSet",
+				ContName:       container.Name,
+				Image:          container.Image,
+				Env:            nil,
+				Port:           portNum,
+				PortName:       port.Name,
+				PortProtocol:   string(port.Protocol),
 			}
 			target.hash = mustCalcHash(target)
 			target.Tags().Merge(discoveryTags)
