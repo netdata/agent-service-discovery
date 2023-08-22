@@ -34,6 +34,9 @@ type (
 		NodeName    string
 		PodIP       string
 
+		ControllerName string
+		ControllerKind string
+
 		ContName     string
 		Image        string
 		Env          map[string]interface{}
@@ -58,7 +61,7 @@ type Pod struct {
 }
 
 func NewPod(pod, cmap, secret cache.SharedInformer) *Pod {
-	queue := workqueue.NewNamed("pod")
+	queue := workqueue.NewWithConfig(workqueue.QueueConfig{Name: "pod"})
 	pod.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { enqueue(queue, obj) },
 		UpdateFunc: func(_, obj interface{}) { enqueue(queue, obj) },
@@ -151,22 +154,33 @@ func (p Pod) buildGroup(pod *apiv1.Pod) model.Group {
 }
 
 func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
+	var name, kind string
+	for _, ref := range pod.OwnerReferences {
+		if ref.Controller != nil && *ref.Controller {
+			name = ref.Name
+			kind = ref.Kind
+			break
+		}
+	}
+
 	for _, container := range pod.Spec.Containers {
 		env := p.collectEnv(pod.Namespace, container)
 
 		if len(container.Ports) == 0 {
 			target := &PodTarget{
-				tuid:        podTUID(pod, container),
-				Address:     pod.Status.PodIP,
-				Namespace:   pod.Namespace,
-				Name:        pod.Name,
-				Annotations: toMapInterface(pod.Annotations),
-				Labels:      toMapInterface(pod.Labels),
-				NodeName:    pod.Spec.NodeName,
-				PodIP:       pod.Status.PodIP,
-				ContName:    container.Name,
-				Image:       container.Image,
-				Env:         toMapInterface(env),
+				tuid:           podTUID(pod, container),
+				Address:        pod.Status.PodIP,
+				Namespace:      pod.Namespace,
+				Name:           pod.Name,
+				Annotations:    toMapInterface(pod.Annotations),
+				Labels:         toMapInterface(pod.Labels),
+				NodeName:       pod.Spec.NodeName,
+				PodIP:          pod.Status.PodIP,
+				ControllerName: name,
+				ControllerKind: kind,
+				ContName:       container.Name,
+				Image:          container.Image,
+				Env:            toMapInterface(env),
 			}
 			hash, err := calcHash(target)
 			if err != nil {
@@ -179,20 +193,22 @@ func (p Pod) buildTargets(pod *apiv1.Pod) (targets []model.Target) {
 			for _, port := range container.Ports {
 				portNum := strconv.FormatUint(uint64(port.ContainerPort), 10)
 				target := &PodTarget{
-					tuid:         podTUIDWithPort(pod, container, port),
-					Address:      net.JoinHostPort(pod.Status.PodIP, portNum),
-					Namespace:    pod.Namespace,
-					Name:         pod.Name,
-					Annotations:  toMapInterface(pod.Annotations),
-					Labels:       toMapInterface(pod.Labels),
-					NodeName:     pod.Spec.NodeName,
-					PodIP:        pod.Status.PodIP,
-					ContName:     container.Name,
-					Image:        container.Image,
-					Env:          toMapInterface(env),
-					Port:         portNum,
-					PortName:     port.Name,
-					PortProtocol: string(port.Protocol),
+					tuid:           podTUIDWithPort(pod, container, port),
+					Address:        net.JoinHostPort(pod.Status.PodIP, portNum),
+					Namespace:      pod.Namespace,
+					Name:           pod.Name,
+					Annotations:    toMapInterface(pod.Annotations),
+					Labels:         toMapInterface(pod.Labels),
+					NodeName:       pod.Spec.NodeName,
+					PodIP:          pod.Status.PodIP,
+					ControllerName: name,
+					ControllerKind: kind,
+					ContName:       container.Name,
+					Image:          container.Image,
+					Env:            toMapInterface(env),
+					Port:           portNum,
+					PortName:       port.Name,
+					PortProtocol:   string(port.Protocol),
 				}
 				hash, err := calcHash(target)
 				if err != nil {
