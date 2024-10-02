@@ -10,14 +10,16 @@ import (
 )
 
 var FuncMap = func() template.FuncMap {
-	fm := sprig.HermeticTxtFuncMap()
-	for name, fn := range funcMap {
+	fm := sprig.TxtFuncMap()
+
+	for name, fn := range extraFuncMap {
 		fm[name] = fn
 	}
+
 	return fm
 }()
 
-var funcMap = map[string]interface{}{
+var extraFuncMap = map[string]interface{}{
 	"glob": globAny,
 	"re":   regexpAny,
 }
