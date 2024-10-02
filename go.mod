@@ -1,6 +1,6 @@
 module github.com/netdata/sd
 
-go 1.20
+go 1.23.1
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
