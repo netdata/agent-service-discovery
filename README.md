@@ -9,9 +9,9 @@ sidebar_position: 300
 
 # Service discovery
 
-> [!WARNING] Deprecation Notice
-> 
-> This repository's service discovery functionality has been migrated to go.d.plugin in the main [Netdata repository](https://github.com/netdata/netdata). All future development, maintenance, and updates will continue there.
+> [!WARNING]
+>
+> **Deprecation Notice**: This repository's service discovery functionality has been migrated to go.d.plugin in the main [Netdata repository](https://github.com/netdata/netdata). All future development, maintenance, and updates will continue there.
 
 <details>
 <summary>Old readme</summary>
